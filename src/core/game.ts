@@ -14,6 +14,13 @@ import { FinaleScreen } from '../screens/finale';
 import { CreditsScreen } from '../screens/credits';
 import type { Chamber } from '../chambers/chamber';
 import { LimitChamber } from '../chambers/01-limit';
+import { WhitepaperChamber } from '../chambers/02-whitepaper';
+import { SpaceshipChamber } from '../chambers/03-spaceship';
+import { CrowdsaleChamber } from '../chambers/04-crowdsale';
+import { TheDaoChamber } from '../chambers/05-thedao';
+import { ForkChamber } from '../chambers/06-fork';
+import { BloomChamber } from '../chambers/07-bloom';
+import { MergeChamber } from '../chambers/08-merge';
 import { Audio } from '../audio/audio';
 import { Chain } from '../chain/chain';
 import { Progress } from './progress';
@@ -29,7 +36,7 @@ export type GameState =
 
 export const CHAMBER_COUNT = 8;
 // Only chapter 01 (index 0) ships with the v2 redesign; 02-08 are locked in the select screen.
-const IMPLEMENTED_CHAMBERS = new Set<number>([0]);
+const IMPLEMENTED_CHAMBERS = new Set<number>([0, 1, 2, 3, 4, 5, 6, 7]);
 
 export class Game {
   renderer: Renderer;
@@ -116,11 +123,12 @@ export class Game {
     this.progress.mark(index);
     this.chain.markChamber(index).catch(() => {/* offline ok */});
     const next = index + 1;
-    if (next < CHAMBER_COUNT && IMPLEMENTED_CHAMBERS.has(next)) {
+    if (next >= CHAMBER_COUNT) {
+      // Finished the final chapter — archetype mirror / reveal screen.
+      this.enterFinale();
+    } else if (IMPLEMENTED_CHAMBERS.has(next)) {
       this.enterChamber(next);
     } else {
-      // Either finished the last playable v2 chapter or the next one is still locked —
-      // drop back to select so the player sees their progress and what's "COMING SOON".
       this.enterSelect();
     }
   }
@@ -141,7 +149,14 @@ export class Game {
   private buildChamber(index: number): Chamber {
     switch (index) {
       case 0: return new LimitChamber();
-      default: throw new Error(`chamber ${index + 1} not yet implemented (v2 redesign in progress)`);
+      case 1: return new WhitepaperChamber();
+      case 2: return new SpaceshipChamber();
+      case 3: return new CrowdsaleChamber();
+      case 4: return new TheDaoChamber();
+      case 5: return new ForkChamber();
+      case 6: return new BloomChamber();
+      case 7: return new MergeChamber();
+      default: throw new Error(`chamber ${index + 1} not implemented`);
     }
   }
 }

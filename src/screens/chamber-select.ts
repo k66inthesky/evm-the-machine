@@ -1,6 +1,6 @@
 // ChamberSelect — the lobby. Eight chapters, each a moment in Ethereum's
-// history. Only Chapter 01 ships with the v2 redesign; 02-08 are locked
-// "COMING SOON" cards so players see the shape of the whole journey.
+// history. All eight ship in the v2 redesign; the card marks which the
+// player has already completed.
 import type { Game } from '../core/game';
 
 interface ChapterCard {
@@ -65,29 +65,26 @@ export class ChamberSelect {
     const list = root.querySelector('#list') as HTMLDivElement;
     for (const c of CHAPTERS) {
       const done = game.progress.has(c.idx);
-      // Only chapter 01 is playable in the v2 build; others gated.
-      const playable = c.idx === 0;
-      const locked = !playable;
-      const borderColor = done ? '#ffd700' : locked ? '#ffffff22' : '#00f0ff';
-      const textColor = done ? '#ffd700' : locked ? '#ffffff44' : '#00f0ff';
+      const borderColor = done ? '#ffd700' : '#00f0ff';
+      const textColor = done ? '#ffd700' : '#00f0ff';
       const card = document.createElement('div');
       Object.assign(card.style, {
         border: `2px solid ${borderColor}`,
-        background: locked ? '#ffffff04' : '#00f0ff08',
+        background: '#00f0ff08',
         padding: '22px 24px',
-        cursor: locked ? 'not-allowed' : 'pointer',
-        boxShadow: locked ? 'none' : `0 0 20px ${borderColor}33`,
+        cursor: 'pointer',
+        boxShadow: `0 0 20px ${borderColor}33`,
         textAlign: 'left',
         position: 'relative',
       });
-      const status = done ? 'COMPLETE' : locked ? 'COMING SOON' : 'READY';
+      const status = done ? 'COMPLETE' : 'READY';
       card.innerHTML = `
         <div style="font-size:10px;letter-spacing:0.3em;opacity:0.6;color:${textColor};">CHAPTER ${c.code} · ${c.year} · ${status}</div>
         <div style="font-size:22px;letter-spacing:0.18em;margin-top:8px;color:${textColor};">${c.name}</div>
         <div style="font-size:14px;letter-spacing:0.25em;margin-top:2px;opacity:0.75;color:${textColor};">${c.zh}</div>
         <div style="font-size:11px;letter-spacing:0.2em;opacity:0.5;margin-top:14px;color:${textColor};">${c.tag}</div>
       `;
-      if (!locked) card.addEventListener('click', () => game.enterChamber(c.idx));
+      card.addEventListener('click', () => game.enterChamber(c.idx));
       list.appendChild(card);
     }
 
