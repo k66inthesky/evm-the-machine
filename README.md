@@ -30,8 +30,8 @@ No plugins, no installers — runs in any modern browser.
 
 ## ⛓ On-chain (Sepolia, optional)
 
-- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) — _deployed address goes here after Sepolia funding_
-- **Etherscan**: _(coming)_
+- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) at [`0xDc605783C5bad53F0Bf4a329fe1f833045dD521B`](https://sepolia.etherscan.io/address/0xDc605783C5bad53F0Bf4a329fe1f833045dD521B)
+- **Deploy tx**: [`0x8affb0…d91d`](https://sepolia.etherscan.io/tx/0x8affb0724f2956f2cdfed306943f6206f36748520f052a0f85a45ed12fbed91d)
 - The chain is the player's **souvenir**, not a login gate. The game is 100% playable offline. Connecting a wallet records each chamber you complete and lets you mint a "Journey" once you finish all six.
 
 See [`contracts/README.md`](contracts/README.md) for the deploy + verify steps.

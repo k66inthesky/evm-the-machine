@@ -46,38 +46,12 @@ Then on https://wavedash.com/, open the game → "Submit to jam" → pick
 **Gamedev.js Jam 2026** → the Wavedash Challenge is auto-selected for
 Wavedash-deployed submissions.
 
-## 4. Sepolia contract — ⏸ BLOCKED on Sepolia funds
+## 4. Sepolia contract — ✅ DONE
 
-Deployer wallet `0x264D10e6f8D5e53e950DAb7bCF32B3B59003f824` is empty.
-After ≥ 0.05 SepoliaETH lands (use any of these faucets):
-
-- https://cloud.google.com/application/web3/faucet/ethereum/sepolia
-- https://sepolia-faucet.pk910.de/
-- https://www.alchemy.com/faucets/ethereum-sepolia
-
-Run:
-
-```bash
-cd ~/evm-the-machine
-source .env
-cd contracts
-forge create src/EVMHistorian.sol:EVMHistorian \
-  --rpc-url "$SEPOLIA_RPC_URL" \
-  --private-key "$DEPLOYER_PRIVATE_KEY" \
-  --broadcast
-
-# copy "Deployed to: 0x..." into .env:
-#   VITE_HISTORIAN_ADDRESS=0x...
-cd ..
-npm run build                     # rebuild with contract wired in
-python3 -c "import zipfile, os; z = zipfile.ZipFile('submission/build.zip','w',zipfile.ZIP_DEFLATED); [z.write(os.path.join(r,f), os.path.relpath(os.path.join(r,f),'dist')) for r,_,fs in os.walk('dist') for f in fs]; z.close()"
-wavedash build push               # push the wired build to Wavedash
-# re-upload build.zip on itch.io page.
-```
-
-Game works 100% offline without the contract — this step only unlocks the
-Ethereum track's on-chain journey record + NFT mint. The Ethereum challenge
-judges look for *meaningful integration*, so this step is worth the 10 min.
+- **Address**: [`0xDc605783C5bad53F0Bf4a329fe1f833045dD521B`](https://sepolia.etherscan.io/address/0xDc605783C5bad53F0Bf4a329fe1f833045dD521B)
+- **Deploy tx**: [`0x8affb0…d91d`](https://sepolia.etherscan.io/tx/0x8affb0724f2956f2cdfed306943f6206f36748520f052a0f85a45ed12fbed91d)
+- **Cost**: 0.000000905 ETH (0.3 → 0.2999991 SepoliaETH remaining)
+- Address is baked into the current `submission/build.zip`; just re-upload.
 
 ## 5. Final 2-minute checklist before the deadline
 
