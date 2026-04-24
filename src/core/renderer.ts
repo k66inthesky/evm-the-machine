@@ -20,7 +20,13 @@ export class Renderer {
   private currentCamera: THREE.Camera | null = null;
 
   constructor(host: HTMLElement) {
-    this.gl = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.gl = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      // Preserved so we can grab canvas.toDataURL() for jam screenshots.
+      // Tiny perf cost (~0.5ms), well worth it.
+      preserveDrawingBuffer: true,
+    });
     this.gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.gl.setSize(window.innerWidth, window.innerHeight);
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
