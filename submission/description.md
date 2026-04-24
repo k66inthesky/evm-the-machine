@@ -24,5 +24,8 @@ The chain is your souvenir — not a login gate. The game is fully playable offl
 ## Stack
 Three.js · Vite · viem · Tone.js · Foundry · Solidity
 
+## Links
+- **Source**: [github.com/k66inthesky/evm-the-machine](https://github.com/k66inthesky/evm-the-machine) (MIT)
+
 ## Credits
 Design, code, and audio: **k66**
