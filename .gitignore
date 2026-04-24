@@ -30,3 +30,15 @@ coverage/
 .nyc_output/
 tmp/
 scratch/
+
+# secrets / wallets — defensive; anything that looks like a key must never land in git
+*.pem
+*.key
+*.p12
+*.pfx
+keystore/
+wallet.json
+wallet-*.json
+secrets/
+*.bak
+*.swp
