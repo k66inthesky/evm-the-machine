@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVM: The Machine</title>
+    <meta name="description" content="Step inside the World Computer. A first-person journey through six chambers of Ethereum history. Gamedev.js Jam 2026." />
+    <style>
+      :root {
+        --bg: #0a0e1a;
+        --cyan: #00f0ff;
+        --purple: #8a00f0;
+        --red: #ff0055;
+        --orange: #ffa500;
+        --gold: #ffd700;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--cyan); font-family: 'Courier New', ui-monospace, monospace; }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+      .ui > * { pointer-events: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="ui" class="ui"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
