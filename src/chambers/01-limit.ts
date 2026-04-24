@@ -78,6 +78,7 @@ export class LimitChamber extends Chamber {
 
   // State.
   private phase: 'intro' | 'active' | 'picked' | 'exiting' = 'intro';
+  private briefing = true;              // blocking overlay shown until dismissed
   private timeInScene = 0;
   private phoneBuzzAt = [4, 6.5, 9];   // seconds into the scene
   private phoneBuzzPlayed: boolean[] = [false, false, false];
@@ -95,8 +96,12 @@ export class LimitChamber extends Chamber {
   // Bed AABB.
   private readonly BED = { xMin: -2.8, xMax: -1.2, zMin: 0.3, zMax: 2.3 };
 
-  // HUD prompt shown when looking at something interactive.
+  // HUD elements.
   private prompt: HTMLDivElement | null = null;
+  private objective: HTMLDivElement | null = null;
+  private crosshair: HTMLDivElement | null = null;
+  private escHint: HTMLDivElement | null = null;
+  private briefingEl: HTMLDivElement | null = null;
 
   protected build() {
     this.scene.background = new THREE.Color(0x0a0a10);
@@ -125,6 +130,14 @@ export class LimitChamber extends Chamber {
     // Render the initial CRT screen content.
     this.renderCRT();
     this.renderWhiteboard();
+
+    // Persistent HUD: objective tag, crosshair, ESC hint, and an opening
+    // briefing card so the player knows where they are and what to do.
+    this.buildObjectiveHUD();
+    this.buildCrosshair();
+    this.buildEscHint();
+    this.buildBriefing();
+    this.setObjective('WALK TO THE CRT · PRESS E TO READ');
   }
 
   // ---- Scene construction ------------------------------------------------
@@ -434,6 +447,13 @@ export class LimitChamber extends Chamber {
   // ---- Per-frame update --------------------------------------------------
 
   update(dt: number, input: Input) {
+    // Briefing card owns input until dismissed — no movement, no interactions,
+    // no timer advance. The snow keeps drifting because it looks alive.
+    if (this.briefing) {
+      this.updateSnow(dt);
+      return;
+    }
+
     this.fps.update(dt, input);
     this.timeInScene += dt;
 
@@ -537,6 +557,7 @@ export class LimitChamber extends Chamber {
       this.phase = 'active';
       this.renderCRT();
       this.game.audio.playSFX('interact');
+      this.setObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
     } else if (target === this.phoneMesh && !this.phoneRead) {
       this.phoneRead = true;
       this.game.audio.playSFX('interact');
@@ -564,6 +585,7 @@ export class LimitChamber extends Chamber {
     this.game.archetype.add(0, `choice-${c.key}`, c.weights);
     this.game.audio.playSFX('win');
     this.renderCRT(c);
+    this.setObjective('REPLY SENT · CHAPTER COMPLETE');
     // Brief beat, then wrap the chamber.
     setTimeout(() => this.win(), 1800);
   }
@@ -574,11 +596,10 @@ export class LimitChamber extends Chamber {
     if (this.phase !== 'intro' && this.phase !== 'active') return;
     if (this.fps.position.z > 4 && !this.choiceLogged) {
       this.phase = 'exiting';
-      if (this.phase === 'exiting' && !this.choiceLogged) {
-        this.game.archetype.add(0, 'silent-exit', { W: 2 });
-      }
+      this.game.archetype.add(0, 'silent-exit', { W: 2 });
       this.game.audio.playSFX('portal');
       this.renderCRT(null, 'YOU LEFT WITHOUT REPLYING.');
+      this.setObjective('YOU WALKED AWAY · CHAPTER COMPLETE');
       setTimeout(() => this.win(), 1200);
     }
   }
@@ -692,6 +713,125 @@ export class LimitChamber extends Chamber {
       this.prompt.textContent = text;
     }
     this.prompt.style.opacity = '1';
+  }
+
+  private buildObjectiveHUD() {
+    this.objective = this.game.hud.element('', {
+      position: 'absolute',
+      right: '24px',
+      top: '24px',
+      padding: '8px 14px',
+      border: '1px solid #00f0ff55',
+      background: '#0a0e1acc',
+      color: '#00f0ff',
+      fontFamily: 'Courier New, monospace',
+      fontSize: '12px',
+      letterSpacing: '0.2em',
+      textTransform: 'uppercase',
+      textShadow: '0 0 6px #00f0ff88',
+      pointerEvents: 'none',
+      maxWidth: '360px',
+    });
+  }
+
+  private setObjective(text: string) {
+    if (this.objective) {
+      this.objective.innerHTML = `<span style="opacity:0.55;">OBJECTIVE ·</span> ${text}`;
+    }
+  }
+
+  private buildCrosshair() {
+    this.crosshair = this.game.hud.element('+', {
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+      color: '#00f0ff',
+      fontFamily: 'Courier New, monospace',
+      fontSize: '18px',
+      opacity: '0.55',
+      pointerEvents: 'none',
+    });
+  }
+
+  private buildEscHint() {
+    this.escHint = this.game.hud.element('ESC · BACK TO CHAPTER SELECT', {
+      position: 'absolute',
+      right: '24px',
+      bottom: '24px',
+      color: '#00f0ff99',
+      fontFamily: 'Courier New, monospace',
+      fontSize: '11px',
+      letterSpacing: '0.2em',
+      opacity: '0.7',
+      pointerEvents: 'none',
+    });
+  }
+
+  private buildBriefing() {
+    const html = `
+      <div style="max-width:620px;padding:32px 40px;border:1px solid #00f0ff66;background:#05070ee0;box-shadow:0 0 32px #00f0ff22;">
+        <div style="font-size:11px;letter-spacing:0.35em;color:#7ac8ff;opacity:0.7;">CHAPTER 01 · 2013</div>
+        <div style="font-size:28px;letter-spacing:0.22em;color:#00f0ff;margin-top:4px;text-shadow:0 0 10px #00f0ff88;">THE LIMIT</div>
+        <div style="font-size:14px;letter-spacing:0.18em;color:#9adfff;margin-top:2px;opacity:0.75;">極限 · TORONTO · NOVEMBER</div>
+        <div style="height:1px;background:#00f0ff33;margin:20px 0;"></div>
+        <div style="font-size:14px;line-height:1.85;color:#d0e8ff;letter-spacing:0.04em;">
+          You are nineteen. It's 3 AM. A Bitcointalk thread argues whether
+          scripting on Bitcoin could ever loop. Your desk is the only light
+          in the room.
+        </div>
+        <div style="height:12px;"></div>
+        <div style="font-size:13px;line-height:1.9;color:#9adfff;letter-spacing:0.04em;">
+          <b style="color:#ffd070;">WHAT TO DO —</b> walk to the CRT on the desk,
+          press <b>E</b> to read the thread, then press <b>1 / 2 / 3 / 4</b>
+          to post a reply. Or just walk out through the hallway door.
+        </div>
+        <div style="height:16px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12px;color:#7ac8ff;letter-spacing:0.15em;">
+          <span><b>WASD</b> · MOVE</span>
+          <span><b>MOUSE</b> · LOOK</span>
+          <span><b>E</b> · INTERACT</span>
+          <span><b>SHIFT</b> · RUN</span>
+          <span><b>1-4</b> · REPLY</span>
+          <span><b>ESC</b> · BACK TO SELECT</span>
+        </div>
+        <div style="margin-top:26px;text-align:center;font-size:13px;letter-spacing:0.35em;color:#ffd070;animation:limitPulse 1.4s ease-in-out infinite;">
+          [ CLICK OR PRESS ANY KEY TO BEGIN ]
+        </div>
+        <style>@keyframes limitPulse { 0%,100%{opacity:1;} 50%{opacity:0.45;} }</style>
+      </div>
+    `;
+    this.briefingEl = this.game.hud.element(html, {
+      position: 'absolute',
+      inset: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#000000b8',
+      backdropFilter: 'blur(2px)',
+      pointerEvents: 'auto',
+      cursor: 'pointer',
+      zIndex: '50',
+    });
+    const dismiss = () => this.dismissBriefing();
+    this.briefingEl.addEventListener('click', dismiss);
+    // Any key also dismisses. Listen once on window; clean up on dispose.
+    const keyHandler = () => { if (this.briefing) dismiss(); };
+    window.addEventListener('keydown', keyHandler);
+    this.disposables.push(() => window.removeEventListener('keydown', keyHandler));
+  }
+
+  private dismissBriefing() {
+    if (!this.briefing) return;
+    this.briefing = false;
+    if (this.briefingEl) {
+      this.briefingEl.style.transition = 'opacity 0.35s';
+      this.briefingEl.style.opacity = '0';
+      this.briefingEl.style.pointerEvents = 'none';
+      setTimeout(() => this.briefingEl?.remove(), 400);
+    }
+    // Request pointer lock now that the player is ready.
+    this.game.input.requestPointer();
   }
 }
 
