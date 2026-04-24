@@ -284,8 +284,10 @@ export class LimitChamber extends Chamber {
     this.crtCanvas.height = 960;
     this.crtCtx = this.crtCanvas.getContext('2d')!;
     this.crtTexture = new THREE.CanvasTexture(this.crtCanvas);
+    // NearestFilter for magnification keeps text crisp — LinearFilter was
+    // adding a halo around every letter that the user read as blur.
     this.crtTexture.minFilter = THREE.LinearFilter;
-    this.crtTexture.magFilter = THREE.LinearFilter;
+    this.crtTexture.magFilter = THREE.NearestFilter;
     this.crtTexture.anisotropy = 8;
     this.crtTexture.generateMipmaps = false;
     this.crtScreen = new THREE.Mesh(
@@ -298,40 +300,65 @@ export class LimitChamber extends Chamber {
 
   private buildPhone() {
     const phone = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.015, 0.16),
+      new THREE.BoxGeometry(0.10, 0.018, 0.20),
       new THREE.MeshBasicMaterial({ color: 0x050510 }),
     );
     phone.position.set(1.1, 0.849, -2.0);
     this.scene.add(phone);
-    // Screen pulse — a thin glowing top.
+    // Screen pulse — a glowing top plane with a legible message from Mom.
+    // Canvas is oversized and Nearest-filtered so the text stays crisp
+    // when the player leans over the desk to look at it.
     const screenCanvas = document.createElement('canvas');
-    screenCanvas.width = 128;
-    screenCanvas.height = 64;
+    screenCanvas.width = 512;
+    screenCanvas.height = 256;
     const sctx = screenCanvas.getContext('2d')!;
     this.drawPhoneScreen(sctx, false);
     const tex = new THREE.CanvasTexture(screenCanvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
     const screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.07, 0.14),
+      new THREE.PlaneGeometry(0.09, 0.18),
       new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
     );
     screen.rotation.x = -Math.PI / 2;
-    screen.position.set(1.1, 0.858, -2.0);
+    screen.position.set(1.1, 0.859, -2.0);
     this.scene.add(screen);
     (phone as any).__screen = { canvas: screenCanvas, ctx: sctx, texture: tex };
     this.phoneMesh = phone;
   }
 
   private drawPhoneScreen(ctx: CanvasRenderingContext2D, read: boolean) {
-    ctx.fillStyle = read ? '#1a1a22' : '#0a1a3a';
-    ctx.fillRect(0, 0, 128, 64);
-    ctx.fillStyle = '#80c8ff';
-    ctx.font = 'bold 10px monospace';
+    const W = 512, H = 256;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = read ? '#0a1020' : '#0a1a3a';
+    ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'top';
-    ctx.fillText(read ? '(read)' : 'MOM', 6, 6);
-    ctx.font = '9px monospace';
-    ctx.fillStyle = '#c0e0ff';
-    ctx.fillText(read ? 'ok. love u.' : 'when r u', 6, 22);
-    ctx.fillText(read ? '' : 'home?', 6, 34);
+    // Header bar.
+    ctx.fillStyle = read ? '#4a6080' : '#80c8ff';
+    ctx.font = 'bold 40px monospace';
+    ctx.fillText(read ? 'MOM' : 'MOM', 24, 22);
+    ctx.fillStyle = read ? '#4a6080' : '#ffd070';
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText(read ? '(read)' : '● NEW', W - 170, 30);
+    // Divider.
+    ctx.fillStyle = '#223040';
+    ctx.fillRect(24, 78, W - 48, 2);
+    // Message body.
+    ctx.fillStyle = '#e0eeff';
+    ctx.font = 'bold 32px monospace';
+    if (!read) {
+      ctx.fillText('when r u', 24, 98);
+      ctx.fillText('home for xmas?', 24, 136);
+      ctx.fillStyle = '#9adfff';
+      ctx.font = 'italic bold 24px monospace';
+      ctx.fillText('— press E to read —', 24, 200);
+    } else {
+      ctx.fillText('ok. love u.', 24, 98);
+      ctx.fillStyle = '#5a7090';
+      ctx.font = 'bold 22px monospace';
+      ctx.fillText('sent · just now', 24, 150);
+    }
   }
 
   private buildBed() {
@@ -488,9 +515,22 @@ export class LimitChamber extends Chamber {
       if (!this.phoneBuzzPlayed[i] && this.timeInScene >= this.phoneBuzzAt[i]) {
         this.phoneBuzzPlayed[i] = true;
         this.game.audio.playSFX('hit');
-        // A tiny visual twitch so the player notices.
-        this.phoneMesh.position.y += 0.004;
-        setTimeout(() => { this.phoneMesh.position.y -= 0.004; }, 80);
+        // A bigger visual twitch and a quick objective nudge the first time,
+        // so the player can tell the phone is a real thing to interact with.
+        this.phoneMesh.position.y += 0.01;
+        this.phoneMesh.rotation.z += 0.08;
+        setTimeout(() => {
+          this.phoneMesh.position.y -= 0.01;
+          this.phoneMesh.rotation.z -= 0.08;
+        }, 120);
+        if (i === 0 && !this.phoneRead && this.phase !== 'picked' && this.phase !== 'exiting') {
+          this.setObjective('YOUR PHONE BUZZED · MOM TEXTED · (E TO CHECK)');
+          // Restore the main objective after a beat — the phone is a side thread.
+          setTimeout(() => {
+            if (this.phase === 'intro') this.setObjective('WALK TO THE CRT · PRESS E TO READ');
+            else if (this.phase === 'active') this.setObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
+          }, 4000);
+        }
       }
     }
   }
