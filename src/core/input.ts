@@ -8,6 +8,10 @@ export class Input {
   mouseDY = 0;
   mouseClicked = false;
   pointerLocked = false;
+  // True for one frame when pointer lock transitions from locked → unlocked.
+  // Chrome/Firefox swallow the ESC keydown that releases pointer lock, so
+  // chamber bail-out logic watches this flag instead of wasPressed('Escape').
+  pointerJustReleased = false;
 
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
@@ -25,7 +29,9 @@ export class Input {
       if (this.pointerLocked) this.mouseClicked = true;
     });
     document.addEventListener('pointerlockchange', () => {
+      const wasLocked = this.pointerLocked;
       this.pointerLocked = document.pointerLockElement === canvas;
+      if (wasLocked && !this.pointerLocked) this.pointerJustReleased = true;
     });
     // A user gesture is required to request pointer lock, so we capture a
     // click on the canvas whenever lock isn't held.
@@ -56,5 +62,6 @@ export class Input {
     this.mouseDX = 0;
     this.mouseDY = 0;
     this.pressedThisFrame.clear();
+    this.pointerJustReleased = false;
   }
 }

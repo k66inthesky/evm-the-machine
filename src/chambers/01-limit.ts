@@ -810,17 +810,23 @@ export class LimitChamber extends Chamber {
   }
 
   private buildEscHint() {
-    this.escHint = this.game.hud.element('ESC · BACK TO CHAPTER SELECT', {
+    this.escHint = this.game.hud.element('✕ QUIT · ESC / Q', {
       position: 'absolute',
       right: '24px',
       bottom: '24px',
-      color: '#00f0ff99',
+      color: '#00f0ff',
       fontFamily: 'Courier New, monospace',
-      fontSize: '11px',
-      letterSpacing: '0.2em',
-      opacity: '0.7',
-      pointerEvents: 'none',
+      fontSize: '12px',
+      letterSpacing: '0.22em',
+      opacity: '0.85',
+      padding: '8px 14px',
+      border: '1px solid #00f0ff88',
+      background: '#0a0e1acc',
+      pointerEvents: 'auto',
+      cursor: 'pointer',
+      zIndex: '40',
     });
+    this.escHint.addEventListener('click', () => this.game.enterSelect());
   }
 
   private buildBriefing() {
@@ -848,7 +854,7 @@ export class LimitChamber extends Chamber {
           <span><b>E</b> · INTERACT</span>
           <span><b>SHIFT</b> · RUN</span>
           <span><b>1-4</b> · REPLY</span>
-          <span><b>ESC</b> · BACK TO SELECT</span>
+          <span><b>ESC / Q</b> · QUIT TO MENU</span>
         </div>
         <div style="margin-top:26px;text-align:center;font-size:13px;letter-spacing:0.35em;color:#ffd070;animation:limitPulse 1.4s ease-in-out infinite;">
           [ CLICK OR PRESS ANY KEY TO BEGIN ]
@@ -879,6 +885,7 @@ export class LimitChamber extends Chamber {
   private dismissLimitBriefing() {
     if (!this.briefing) return;
     this.briefing = false;
+    this.briefingActive = false;
     if (this.introBriefingEl) {
       this.introBriefingEl.style.transition = 'opacity 0.35s';
       this.introBriefingEl.style.opacity = '0';

@@ -72,9 +72,14 @@ export class Game {
     const dt = Math.min(0.1, (now - this.lastTime) / 1000) || 0;
     this.lastTime = now;
     if (this.state.kind === 'chamber' && this.activeChamber) {
-      // Esc bails out to chamber select — escape hatch if the player wants
-      // to quit a chamber mid-way.
-      if (this.input.wasPressed('Escape')) {
+      // Bail out to chamber select — ESC, Q, or pointer-unlock (Chrome/FF
+      // swallow the ESC keydown that releases pointer lock, so we also
+      // watch the unlock edge while the chamber's briefing is dismissed).
+      const bail =
+        this.input.wasPressed('Escape') ||
+        this.input.wasPressed('KeyQ') ||
+        (this.input.pointerJustReleased && !this.activeChamber.briefingActive);
+      if (bail) {
         this.enterSelect();
       } else {
         this.activeChamber.update(dt, this.input);
