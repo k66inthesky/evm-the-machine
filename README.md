@@ -13,7 +13,7 @@ A first-person 3D exploration game built in 48 hours for **Gamedev.js Jam 2026**
 
 - **itch.io**: _(coming — submission goes live before the deadline)_
 - **Wavedash**: _(coming — same build, deployed there)_
-- **Source on GitHub**: _(coming — pushed with the submission)_
+- **Source on GitHub**: [github.com/k66inthesky/evm-the-machine](https://github.com/k66inthesky/evm-the-machine)
 
 Local development:
 
