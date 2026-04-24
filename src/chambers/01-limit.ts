@@ -185,25 +185,25 @@ export class LimitChamber extends Chamber {
     // Hallway end wall (whiteboard mounts on this).
     mkWall(2, 2.4, 0, 1.2, 6, Math.PI);
 
-    // A warm lamp-like fake glow floating near the desk lamp position.
-    // MeshBasicMaterial can't pick up PointLight, so we fake warmth with a
-    // large soft additive sprite. Cheaper, and matches the synthwave stack.
+    // A small warm halo right under the lamp head — not a scene-filling flare.
+    // Additive blending + tight falloff so it reads as a bulb, not a sun.
     const glowCanvas = document.createElement('canvas');
     glowCanvas.width = 128;
     glowCanvas.height = 128;
     const gctx = glowCanvas.getContext('2d')!;
-    const grad = gctx.createRadialGradient(64, 64, 4, 64, 64, 64);
-    grad.addColorStop(0, 'rgba(255,180,90,0.9)');
-    grad.addColorStop(0.4, 'rgba(255,140,60,0.35)');
+    const grad = gctx.createRadialGradient(64, 64, 2, 64, 64, 60);
+    grad.addColorStop(0, 'rgba(255,190,110,0.55)');
+    grad.addColorStop(0.35, 'rgba(255,150,70,0.18)');
     grad.addColorStop(1, 'rgba(255,120,40,0)');
     gctx.fillStyle = grad;
     gctx.fillRect(0, 0, 128, 128);
     const glowTex = new THREE.CanvasTexture(glowCanvas);
     this.lampGlow = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      opacity: 0.75,
     }));
-    this.lampGlow.position.set(-0.8, 1.6, -2.3);
-    this.lampGlow.scale.set(2.2, 2.2, 1);
+    this.lampGlow.position.set(-0.8, 1.35, -2.35);
+    this.lampGlow.scale.set(0.55, 0.55, 1);
     this.scene.add(this.lampGlow);
   }
 
@@ -275,12 +275,17 @@ export class LimitChamber extends Chamber {
     this.crtMesh = crtBody;
 
     // The glowing screen — a plane inset slightly on the front of the CRT.
+    // Canvas is deliberately oversized (1280×960) so the text stays crisp when
+    // the player leans close. Anisotropy lifts the off-angle sharpness too.
     this.crtCanvas = document.createElement('canvas');
-    this.crtCanvas.width = 512;
-    this.crtCanvas.height = 384;
+    this.crtCanvas.width = 1280;
+    this.crtCanvas.height = 960;
     this.crtCtx = this.crtCanvas.getContext('2d')!;
     this.crtTexture = new THREE.CanvasTexture(this.crtCanvas);
     this.crtTexture.minFilter = THREE.LinearFilter;
+    this.crtTexture.magFilter = THREE.LinearFilter;
+    this.crtTexture.anisotropy = 8;
+    this.crtTexture.generateMipmaps = false;
     this.crtScreen = new THREE.Mesh(
       new THREE.PlaneGeometry(0.72, 0.54),
       new THREE.MeshBasicMaterial({ map: this.crtTexture, toneMapped: false }),
@@ -609,36 +614,45 @@ export class LimitChamber extends Chamber {
   private renderCRT(picked: Choice | null = null, overrideMsg: string | null = null) {
     const ctx = this.crtCtx;
     const W = this.crtCanvas.width, H = this.crtCanvas.height;
+    // Drawing happens in a virtual 512×384 coord space; the canvas is 2.5× that
+    // physically so the resulting texture stays crisp when sampled in 3D.
+    const SX = W / 512, SY = H / 384;
+    ctx.setTransform(SX, 0, 0, SY, 0, 0);
+    const VW = 512, VH = 384;
 
     // CRT background.
     ctx.fillStyle = '#05060a';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, VW, VH);
 
-    // Scanlines for CRT feel.
-    ctx.fillStyle = 'rgba(0,200,255,0.04)';
-    for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+    // Scanlines for CRT feel — spaced in canvas pixels, so we reset the
+    // transform briefly to get crisp 1-pixel-tall lines.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(0,200,255,0.05)';
+    for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
+    ctx.setTransform(SX, 0, 0, SY, 0, 0);
 
     ctx.fillStyle = '#7ac8ff';
-    ctx.font = 'bold 18px monospace';
-    ctx.fillText('bitcointalk.org', 16, 28);
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText('bitcointalk.org', 16, 32);
     ctx.fillStyle = '#3a6080';
-    ctx.fillText('— press E to read —', 16, 50);
+    ctx.font = '16px monospace';
+    ctx.fillText('— the scripting limit thread —', 16, 54);
 
     if (overrideMsg) {
       ctx.fillStyle = '#ff9050';
-      ctx.font = 'bold 22px monospace';
-      ctx.fillText(overrideMsg, 20, H / 2);
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText(overrideMsg, 20, VH / 2);
       this.crtTexture.needsUpdate = true;
       return;
     }
 
     if (this.phase === 'intro') {
-      ctx.fillStyle = '#d0d8ff';
-      ctx.font = 'bold 22px monospace';
-      ctx.fillText('Bitcoin is limited to', 20, 100);
-      ctx.fillText('payments — or is it?', 20, 128);
-      ctx.fillStyle = '#7ac8ff';
-      ctx.font = '14px monospace';
+      ctx.fillStyle = '#e8ecff';
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText('Bitcoin is limited to', 20, 102);
+      ctx.fillText('payments — or is it?', 20, 134);
+      ctx.fillStyle = '#9adfff';
+      ctx.font = 'bold 17px monospace';
       const body = [
         '@satoshi_fan   2013-11-14',
         '  Script is purpose-built, not crippled.',
@@ -648,32 +662,32 @@ export class LimitChamber extends Chamber {
         '  Scripts that loop are another chain.',
         '  Write the paper, kid.',
       ];
-      body.forEach((ln, i) => ctx.fillText(ln, 20, 170 + i * 20));
-      ctx.fillStyle = '#ff9050';
-      ctx.font = 'italic 14px monospace';
-      ctx.fillText('[ press E to open the reply box ]', 20, H - 24);
+      body.forEach((ln, i) => ctx.fillText(ln, 20, 176 + i * 24));
+      ctx.fillStyle = '#ffb070';
+      ctx.font = 'italic bold 16px monospace';
+      ctx.fillText('[ press E to open the reply box ]', 20, VH - 20);
     } else if (this.phase === 'active' && !picked) {
-      ctx.fillStyle = '#d0d8ff';
-      ctx.font = 'bold 20px monospace';
-      ctx.fillText('Reply to thread:', 20, 96);
+      ctx.fillStyle = '#e8ecff';
+      ctx.font = 'bold 24px monospace';
+      ctx.fillText('Reply to thread:', 20, 100);
       ctx.fillStyle = '#9adfff';
-      ctx.font = '15px monospace';
+      ctx.font = 'bold 17px monospace';
       CHOICES.forEach((c, i) => {
-        ctx.fillText(`[${c.key}] ${c.label}`, 20, 140 + i * 40);
+        ctx.fillText(`[${c.key}] ${c.label}`, 20, 146 + i * 44);
       });
-      ctx.fillStyle = '#ff9050';
-      ctx.font = 'italic 14px monospace';
-      ctx.fillText('press 1 / 2 / 3 / 4', 20, H - 24);
+      ctx.fillStyle = '#ffb070';
+      ctx.font = 'italic bold 16px monospace';
+      ctx.fillText('press 1 / 2 / 3 / 4', 20, VH - 20);
     } else if (picked) {
       ctx.fillStyle = '#ffd070';
-      ctx.font = 'bold 22px monospace';
-      ctx.fillText('> sent.', 20, 110);
-      ctx.fillStyle = '#d0e8ff';
-      ctx.font = '16px monospace';
-      wrap(ctx, picked.body, 20, 150, W - 40, 24);
-      ctx.fillStyle = '#3a6080';
-      ctx.font = '13px monospace';
-      ctx.fillText('(nov 2013. you have an idea.)', 20, H - 24);
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText('> sent.', 20, 112);
+      ctx.fillStyle = '#e0eeff';
+      ctx.font = 'bold 18px monospace';
+      wrap(ctx, picked.body, 20, 152, VW - 40, 26);
+      ctx.fillStyle = '#5a80a0';
+      ctx.font = '15px monospace';
+      ctx.fillText('(nov 2013. you have an idea.)', 20, VH - 20);
     }
 
     this.crtTexture.needsUpdate = true;
