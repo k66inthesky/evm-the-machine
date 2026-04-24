@@ -13,15 +13,11 @@ import { ChamberSelect } from '../screens/chamber-select';
 import { FinaleScreen } from '../screens/finale';
 import { CreditsScreen } from '../screens/credits';
 import type { Chamber } from '../chambers/chamber';
-import { GenesisChamber } from '../chambers/01-genesis';
-import { DAOChamber } from '../chambers/02-dao';
-import { MergeChamber } from '../chambers/03-merge';
-import { GasStormChamber } from '../chambers/04-gas-storm';
-import { RollupChamber } from '../chambers/05-rollup';
-import { VitalikCoreChamber } from '../chambers/06-vitalik-core';
+import { LimitChamber } from '../chambers/01-limit';
 import { Audio } from '../audio/audio';
 import { Chain } from '../chain/chain';
 import { Progress } from './progress';
+import { ArchetypeTracker } from '../systems/archetype';
 import { installSettings } from './settings';
 
 export type GameState =
@@ -31,7 +27,9 @@ export type GameState =
   | { kind: 'finale' }
   | { kind: 'credits' };
 
-export const CHAMBER_COUNT = 6;
+export const CHAMBER_COUNT = 8;
+// Only chapter 01 (index 0) ships with the v2 redesign; 02-08 are locked in the select screen.
+const IMPLEMENTED_CHAMBERS = new Set<number>([0]);
 
 export class Game {
   renderer: Renderer;
@@ -40,6 +38,7 @@ export class Game {
   audio: Audio;
   chain: Chain;
   progress: Progress;
+  archetype: ArchetypeTracker;
 
   state: GameState = { kind: 'title' };
   private activeScreen: { dispose(): void } | null = null;
@@ -53,6 +52,7 @@ export class Game {
     this.audio = new Audio();
     this.chain = new Chain();
     this.progress = new Progress();
+    this.archetype = new ArchetypeTracker();
   }
 
   start() {
@@ -115,10 +115,13 @@ export class Game {
   finishChamber(index: number) {
     this.progress.mark(index);
     this.chain.markChamber(index).catch(() => {/* offline ok */});
-    if (index + 1 < CHAMBER_COUNT) {
-      this.enterChamber(index + 1);
+    const next = index + 1;
+    if (next < CHAMBER_COUNT && IMPLEMENTED_CHAMBERS.has(next)) {
+      this.enterChamber(next);
     } else {
-      this.enterFinale();
+      // Either finished the last playable v2 chapter or the next one is still locked —
+      // drop back to select so the player sees their progress and what's "COMING SOON".
+      this.enterSelect();
     }
   }
 
@@ -137,13 +140,8 @@ export class Game {
 
   private buildChamber(index: number): Chamber {
     switch (index) {
-      case 0: return new GenesisChamber();
-      case 1: return new DAOChamber();
-      case 2: return new MergeChamber();
-      case 3: return new GasStormChamber();
-      case 4: return new RollupChamber();
-      case 5: return new VitalikCoreChamber();
-      default: throw new Error(`bad chamber index ${index}`);
+      case 0: return new LimitChamber();
+      default: throw new Error(`chamber ${index + 1} not yet implemented (v2 redesign in progress)`);
     }
   }
 }
