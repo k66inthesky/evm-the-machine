@@ -101,7 +101,7 @@ export class LimitChamber extends Chamber {
   private objective: HTMLDivElement | null = null;
   private crosshair: HTMLDivElement | null = null;
   private escHint: HTMLDivElement | null = null;
-  private briefingEl: HTMLDivElement | null = null;
+  private introBriefingEl: HTMLDivElement | null = null;
 
   protected build() {
     this.scene.background = new THREE.Color(0x0a0a10);
@@ -139,7 +139,7 @@ export class LimitChamber extends Chamber {
     this.buildCrosshair();
     this.buildEscHint();
     this.buildBriefing();
-    this.setObjective('WALK TO THE CRT · PRESS E TO READ');
+    this.updateObjective('WALK TO THE CRT · PRESS E TO READ');
   }
 
   // ---- Scene construction ------------------------------------------------
@@ -314,15 +314,19 @@ export class LimitChamber extends Chamber {
     const sctx = screenCanvas.getContext('2d')!;
     this.drawPhoneScreen(sctx, false);
     const tex = new THREE.CanvasTexture(screenCanvas);
-    tex.magFilter = THREE.NearestFilter;
+    // Phone is viewed at a steep angle (flat-ish on desk). Anisotropic linear
+    // filter + a slight tilt toward the player keeps text readable from above.
+    tex.magFilter = THREE.LinearFilter;
     tex.minFilter = THREE.LinearFilter;
+    tex.anisotropy = 16;
     tex.generateMipmaps = false;
     const screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.09, 0.18),
+      new THREE.PlaneGeometry(0.14, 0.28),
       new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
     );
-    screen.rotation.x = -Math.PI / 2;
-    screen.position.set(1.1, 0.859, -2.0);
+    // Tilt the phone so the screen faces the player's eyes, not straight up.
+    screen.rotation.x = -Math.PI / 2 + 0.5;
+    screen.position.set(1.05, 0.92, -1.95);
     this.scene.add(screen);
     (phone as any).__screen = { canvas: screenCanvas, ctx: sctx, texture: tex };
     this.phoneMesh = phone;
@@ -524,11 +528,11 @@ export class LimitChamber extends Chamber {
           this.phoneMesh.rotation.z -= 0.08;
         }, 120);
         if (i === 0 && !this.phoneRead && this.phase !== 'picked' && this.phase !== 'exiting') {
-          this.setObjective('YOUR PHONE BUZZED · MOM TEXTED · (E TO CHECK)');
+          this.updateObjective('YOUR PHONE BUZZED · MOM TEXTED · (E TO CHECK)');
           // Restore the main objective after a beat — the phone is a side thread.
           setTimeout(() => {
-            if (this.phase === 'intro') this.setObjective('WALK TO THE CRT · PRESS E TO READ');
-            else if (this.phase === 'active') this.setObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
+            if (this.phase === 'intro') this.updateObjective('WALK TO THE CRT · PRESS E TO READ');
+            else if (this.phase === 'active') this.updateObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
           }, 4000);
         }
       }
@@ -604,7 +608,7 @@ export class LimitChamber extends Chamber {
       this.phase = 'active';
       this.renderCRT();
       this.game.audio.playSFX('interact');
-      this.setObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
+      this.updateObjective('REPLY TO THE THREAD · PRESS 1 / 2 / 3 / 4');
     } else if (target === this.phoneMesh && !this.phoneRead) {
       this.phoneRead = true;
       this.game.audio.playSFX('interact');
@@ -632,7 +636,7 @@ export class LimitChamber extends Chamber {
     this.game.archetype.add(0, `choice-${c.key}`, c.weights);
     this.game.audio.playSFX('win');
     this.renderCRT(c);
-    this.setObjective('REPLY SENT · CHAPTER COMPLETE');
+    this.updateObjective('REPLY SENT · CHAPTER COMPLETE');
     // Brief beat, then wrap the chamber.
     setTimeout(() => this.win(), 1800);
   }
@@ -646,7 +650,7 @@ export class LimitChamber extends Chamber {
       this.game.archetype.add(0, 'silent-exit', { W: 2 });
       this.game.audio.playSFX('portal');
       this.renderCRT(null, 'YOU LEFT WITHOUT REPLYING.');
-      this.setObjective('YOU WALKED AWAY · CHAPTER COMPLETE');
+      this.updateObjective('YOU WALKED AWAY · CHAPTER COMPLETE');
       setTimeout(() => this.win(), 1200);
     }
   }
@@ -785,7 +789,7 @@ export class LimitChamber extends Chamber {
     });
   }
 
-  private setObjective(text: string) {
+  private updateObjective(text: string) {
     if (this.objective) {
       this.objective.innerHTML = `<span style="opacity:0.55;">OBJECTIVE ·</span> ${text}`;
     }
@@ -852,7 +856,7 @@ export class LimitChamber extends Chamber {
         <style>@keyframes limitPulse { 0%,100%{opacity:1;} 50%{opacity:0.45;} }</style>
       </div>
     `;
-    this.briefingEl = this.game.hud.element(html, {
+    this.introBriefingEl = this.game.hud.element(html, {
       position: 'absolute',
       inset: '0',
       display: 'flex',
@@ -864,22 +868,22 @@ export class LimitChamber extends Chamber {
       cursor: 'pointer',
       zIndex: '50',
     });
-    const dismiss = () => this.dismissBriefing();
-    this.briefingEl.addEventListener('click', dismiss);
+    const dismiss = () => this.dismissLimitBriefing();
+    this.introBriefingEl.addEventListener('click', dismiss);
     // Any key also dismisses. Listen once on window; clean up on dispose.
     const keyHandler = () => { if (this.briefing) dismiss(); };
     window.addEventListener('keydown', keyHandler);
     this.disposables.push(() => window.removeEventListener('keydown', keyHandler));
   }
 
-  private dismissBriefing() {
+  private dismissLimitBriefing() {
     if (!this.briefing) return;
     this.briefing = false;
-    if (this.briefingEl) {
-      this.briefingEl.style.transition = 'opacity 0.35s';
-      this.briefingEl.style.opacity = '0';
-      this.briefingEl.style.pointerEvents = 'none';
-      setTimeout(() => this.briefingEl?.remove(), 400);
+    if (this.introBriefingEl) {
+      this.introBriefingEl.style.transition = 'opacity 0.35s';
+      this.introBriefingEl.style.opacity = '0';
+      this.introBriefingEl.style.pointerEvents = 'none';
+      setTimeout(() => this.introBriefingEl?.remove(), 400);
     }
     // Request pointer lock now that the player is ready.
     this.game.input.requestPointer();
