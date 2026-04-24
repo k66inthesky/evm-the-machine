@@ -108,8 +108,9 @@ export class ForkChamber extends Chamber {
     this.signCtx = this.signCanvas.getContext('2d')!;
     this.signTex = new THREE.CanvasTexture(this.signCanvas);
     this.signTex.minFilter = THREE.LinearFilter;
-    this.signTex.magFilter = THREE.NearestFilter;
+    this.signTex.magFilter = THREE.LinearFilter;
     this.signTex.generateMipmaps = false;
+    this.signTex.anisotropy = 16;
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(4, 0.6),
       new THREE.MeshBasicMaterial({ map: this.signTex, toneMapped: false }),
@@ -149,14 +150,15 @@ export class ForkChamber extends Chamber {
     this.canvas.width = 1024; this.canvas.height = 640;
     this.ctx = this.canvas.getContext('2d')!;
     this.tex = new THREE.CanvasTexture(this.canvas);
-    this.tex.minFilter = THREE.LinearFilter;
-    this.tex.magFilter = THREE.NearestFilter;
-    this.tex.generateMipmaps = false;
+    this.tex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.tex.magFilter = THREE.LinearFilter;
+    this.tex.generateMipmaps = true;
+    this.tex.anisotropy = 16;
     this.screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.62, 0.42),
+      new THREE.PlaneGeometry(0.78, 0.52),
       new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false }),
     );
-    this.screen.position.set(0, 1.05, -3.72);
+    this.screen.position.set(0, 1.1, -3.72);
     this.screen.rotation.x = -0.45;
     this.scene.add(this.screen);
   }
@@ -200,7 +202,10 @@ export class ForkChamber extends Chamber {
       lctx.font = 'bold 32px monospace';
       lctx.fillText(color === 0x00d0ff ? 'funds restored' : 'code is law', 256, 180);
       const tex = new THREE.CanvasTexture(label);
-      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.anisotropy = 16;
       const sign = new THREE.Mesh(
         new THREE.PlaneGeometry(1.2, 0.6),
         new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),

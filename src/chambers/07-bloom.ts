@@ -160,7 +160,10 @@ export class BloomChamber extends Chamber {
       canvas.width = 768; canvas.height = 1024;
       const ctx = canvas.getContext('2d')!;
       const tex = new THREE.CanvasTexture(canvas);
-      tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.NearestFilter; tex.generateMipmaps = false;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      tex.anisotropy = 16;
       const sign = new THREE.Mesh(
         new THREE.PlaneGeometry(1.2, 1.6),
         new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),

@@ -122,7 +122,10 @@ export class MergeChamber extends Chamber {
     const ctx = canvas.getContext('2d')!;
     this.paintMinerFace(ctx, true, 0);
     const tex = new THREE.CanvasTexture(canvas);
-    tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.anisotropy = 16;
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.0, 1.5),
       new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
@@ -176,11 +179,12 @@ export class MergeChamber extends Chamber {
     this.pedestalCanvas.width = 1024; this.pedestalCanvas.height = 640;
     this.pedestalCtx = this.pedestalCanvas.getContext('2d')!;
     this.pedestalTex = new THREE.CanvasTexture(this.pedestalCanvas);
-    this.pedestalTex.minFilter = THREE.LinearFilter;
-    this.pedestalTex.magFilter = THREE.NearestFilter;
-    this.pedestalTex.generateMipmaps = false;
+    this.pedestalTex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.pedestalTex.magFilter = THREE.LinearFilter;
+    this.pedestalTex.generateMipmaps = true;
+    this.pedestalTex.anisotropy = 16;
     this.pedestalScreen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.7, 0.44),
+      new THREE.PlaneGeometry(0.86, 0.54),
       new THREE.MeshBasicMaterial({ map: this.pedestalTex, toneMapped: false }),
     );
     this.pedestalScreen.position.set(0, 1.04, -3.74);
@@ -204,7 +208,10 @@ export class MergeChamber extends Chamber {
     s.fillStyle = '#80ffa0'; s.font = 'bold 52px monospace'; s.textBaseline = 'middle'; s.textAlign = 'center';
     s.fillText('EXIT · WITNESS', 256, 64);
     const tex = new THREE.CanvasTexture(sign);
-    tex.magFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = 16;
     const plate = new THREE.Mesh(
       new THREE.PlaneGeometry(1.6, 0.4),
       new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),

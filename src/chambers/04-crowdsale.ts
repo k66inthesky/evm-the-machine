@@ -135,10 +135,10 @@ export class CrowdsaleChamber extends Chamber {
     this.canvas.width = 1280; this.canvas.height = 800;
     this.ctx = this.canvas.getContext('2d')!;
     this.tex = new THREE.CanvasTexture(this.canvas);
-    this.tex.minFilter = THREE.LinearFilter;
-    this.tex.magFilter = THREE.NearestFilter;
-    this.tex.anisotropy = 8;
-    this.tex.generateMipmaps = false;
+    this.tex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.tex.magFilter = THREE.LinearFilter;
+    this.tex.generateMipmaps = true;
+    this.tex.anisotropy = 16;
     this.screen = new THREE.Mesh(
       new THREE.PlaneGeometry(1.3, 0.82),
       new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false }),
@@ -156,6 +156,7 @@ export class CrowdsaleChamber extends Chamber {
     this.marqueeTex.minFilter = THREE.LinearFilter;
     this.marqueeTex.magFilter = THREE.LinearFilter;
     this.marqueeTex.generateMipmaps = false;
+    this.marqueeTex.anisotropy = 16;
     this.marquee = new THREE.Mesh(
       new THREE.PlaneGeometry(3.2, 0.22),
       new THREE.MeshBasicMaterial({ map: this.marqueeTex, toneMapped: false }),

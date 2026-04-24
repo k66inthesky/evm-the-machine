@@ -149,32 +149,33 @@ export class SpaceshipChamber extends Chamber {
 
   private buildLaptop() {
     const base = new THREE.Mesh(
-      new THREE.BoxGeometry(0.44, 0.03, 0.32),
+      new THREE.BoxGeometry(0.62, 0.03, 0.44),
       new THREE.MeshBasicMaterial({ color: 0xc0c0c8 }),
     );
-    base.position.set(0, 0.82, -0.25);
+    base.position.set(0, 0.82, -0.2);
     this.scene.add(base);
     const lid = new THREE.Mesh(
-      new THREE.BoxGeometry(0.44, 0.3, 0.015),
+      new THREE.BoxGeometry(0.62, 0.42, 0.015),
       new THREE.MeshBasicMaterial({ color: 0xb8b8c0 }),
     );
-    lid.position.set(0, 0.97, -0.39);
+    lid.position.set(0, 1.01, -0.39);
     lid.rotation.x = -0.2;
     this.scene.add(lid);
     this.laptop = lid;
 
     this.canvas = document.createElement('canvas');
-    this.canvas.width = 1024; this.canvas.height = 768;
+    this.canvas.width = 1536; this.canvas.height = 1024;
     this.ctx = this.canvas.getContext('2d')!;
     this.tex = new THREE.CanvasTexture(this.canvas);
-    this.tex.minFilter = THREE.LinearFilter;
-    this.tex.magFilter = THREE.NearestFilter;
-    this.tex.generateMipmaps = false;
+    this.tex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.tex.magFilter = THREE.LinearFilter;
+    this.tex.generateMipmaps = true;
+    this.tex.anisotropy = 16;
     this.screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.41, 0.28),
+      new THREE.PlaneGeometry(0.58, 0.4),
       new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false }),
     );
-    this.screen.position.set(0, 0.97, -0.382);
+    this.screen.position.set(0, 1.01, -0.382);
     this.screen.rotation.x = -0.2;
     this.scene.add(this.screen);
   }
@@ -182,15 +183,18 @@ export class SpaceshipChamber extends Chamber {
   private buildWhiteboards() {
     const mk = (x: number, z: number, ry: number, lines: string[]) => {
       const c = document.createElement('canvas');
-      c.width = 1024; c.height = 768;
+      c.width = 1536; c.height = 1152;
       const cx = c.getContext('2d')!;
-      cx.fillStyle = '#f0efe3'; cx.fillRect(0, 0, 1024, 768);
+      cx.fillStyle = '#f0efe3'; cx.fillRect(0, 0, c.width, c.height);
       cx.fillStyle = '#1a2860';
-      cx.font = 'bold 36px monospace';
+      cx.font = 'bold 54px monospace';
       cx.textBaseline = 'top';
-      lines.forEach((ln, i) => cx.fillText(ln, 28, 36 + i * 52));
+      lines.forEach((ln, i) => cx.fillText(ln, 42, 52 + i * 78));
       const tex = new THREE.CanvasTexture(c);
-      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.anisotropy = 16;
       const m = new THREE.Mesh(
         new THREE.PlaneGeometry(2.4, 1.8),
         new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
