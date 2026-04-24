@@ -28,7 +28,7 @@ export class TitleScreen {
       <div style="font-size:20px;letter-spacing:0.35em;opacity:0.8;margin-top:4px;">THE&nbsp;&nbsp;MACHINE</div>
       <div style="font-size:14px;letter-spacing:0.25em;margin-top:40px;max-width:640px;line-height:1.9;opacity:0.75;">
         STEP INSIDE THE WORLD COMPUTER.<br/>
-        SIX CHAMBERS. SIX MOMENTS OF ETHEREUM.<br/>
+        EIGHT CHAPTERS. ONE MACHINE. ONE OF YOU.<br/>
         YOUR JOURNEY IS ETCHED ONTO THE CHAIN.
       </div>
       <button id="begin" style="margin-top:60px;padding:16px 48px;font-size:18px;letter-spacing:0.35em;background:transparent;border:2px solid #00f0ff;color:#00f0ff;font-family:inherit;cursor:pointer;text-shadow:0 0 8px #00f0ff;box-shadow:0 0 24px #00f0ff44;">BEGIN&nbsp;&nbsp;&gt;</button>

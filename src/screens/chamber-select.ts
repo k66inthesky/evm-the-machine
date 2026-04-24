@@ -1,15 +1,26 @@
-// ChamberSelect — the lobby between title and chamber play. Shows the six
-// chambers, which ones are completed (from localStorage), and a wallet-
-// connect button. Players can re-enter any completed chamber or start fresh.
+// ChamberSelect — the lobby. Eight chapters, each a moment in Ethereum's
+// history. Only Chapter 01 ships with the v2 redesign; 02-08 are locked
+// "COMING SOON" cards so players see the shape of the whole journey.
 import type { Game } from '../core/game';
 
-const CHAMBERS = [
-  { idx: 0, name: 'Genesis',         tag: 'THE FIRST BLOCK'        },
-  { idx: 1, name: 'The DAO',         tag: 'THE REENTRANCY LOOP'    },
-  { idx: 2, name: 'The Merge',       tag: 'PROOF OF STAKE'         },
-  { idx: 3, name: 'Gas Storm',       tag: 'SURVIVE THE FEES'       },
-  { idx: 4, name: 'Rollup',          tag: 'LAYER BY LAYER'         },
-  { idx: 5, name: "Vitalik's Core",  tag: 'MINT YOUR JOURNEY'      },
+interface ChapterCard {
+  idx: number;
+  code: string;   // "01" / "02"
+  name: string;   // English chapter title
+  zh: string;     // Chinese subtitle
+  year: string;
+  tag: string;    // one-line hook
+}
+
+const CHAPTERS: ChapterCard[] = [
+  { idx: 0, code: '01', name: 'THE LIMIT',   zh: '極限',     year: '2013', tag: 'A DORM ROOM. A BITCOINTALK TAB.'   },
+  { idx: 1, code: '02', name: 'WHITEPAPER',  zh: '白皮書',   year: '2013', tag: 'WORDS TRYING TO BECOME A MACHINE.' },
+  { idx: 2, code: '03', name: 'SPACESHIP',   zh: '太空船屋', year: '2014', tag: 'FIVE CO-FOUNDERS IN ZUG.'          },
+  { idx: 3, code: '04', name: 'CROWDSALE',   zh: '眾籌之火', year: '2014', tag: 'THIRTY-ONE THOUSAND BTC.'          },
+  { idx: 4, code: '05', name: 'THE DAO',     zh: '鏡廳',     year: '2016', tag: 'A REENTRANT HALL OF MIRRORS.'      },
+  { idx: 5, code: '06', name: 'FORK',        zh: '分叉',     year: '2016', tag: 'CODE IS LAW — OR IS IT?'           },
+  { idx: 6, code: '07', name: 'BLOOM',       zh: '盛放',     year: '2021', tag: 'DEFI SUMMER NEVER ENDED.'          },
+  { idx: 7, code: '08', name: 'MERGE',       zh: '熔接',     year: '2022', tag: 'PROOF OF WORK LAYS DOWN.'          },
 ];
 
 export class ChamberSelect {
@@ -39,11 +50,11 @@ export class ChamberSelect {
         : '<span style="opacity:0.5;font-size:12px;">NO WALLET — OFFLINE MODE</span>';
 
     root.innerHTML = `
-      <div style="font-size:28px;letter-spacing:0.3em;text-shadow:0 0 12px #00f0ff;">SELECT CHAMBER</div>
-      <div style="font-size:12px;letter-spacing:0.25em;opacity:0.6;margin-top:6px;">YOUR PATH THROUGH THE MACHINE</div>
-      <div id="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:40px;max-width:1100px;width:100%;"></div>
-      <div style="margin-top:36px;font-size:12px;letter-spacing:0.25em;display:flex;gap:24px;align-items:center;">
-        <span>${game.progress.completedCount()}/6 COMPLETE</span>
+      <div style="font-size:28px;letter-spacing:0.3em;text-shadow:0 0 12px #00f0ff;">EVM — THE MACHINE</div>
+      <div style="font-size:12px;letter-spacing:0.25em;opacity:0.6;margin-top:6px;">EIGHT CHAPTERS · ONE MACHINE · ONE OF YOU</div>
+      <div id="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:40px;max-width:1200px;width:100%;"></div>
+      <div style="margin-top:36px;font-size:12px;letter-spacing:0.25em;display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center;">
+        <span>${game.progress.completedCount()}/8 COMPLETE</span>
         <span>·</span>
         ${walletInfo}
         <span>·</span>
@@ -52,24 +63,29 @@ export class ChamberSelect {
     `;
 
     const list = root.querySelector('#list') as HTMLDivElement;
-    for (const c of CHAMBERS) {
+    for (const c of CHAPTERS) {
       const done = game.progress.has(c.idx);
-      const locked = c.idx > 0 && !game.progress.has(c.idx - 1);
-      const card = document.createElement('div');
+      // Only chapter 01 is playable in the v2 build; others gated.
+      const playable = c.idx === 0;
+      const locked = !playable;
       const borderColor = done ? '#ffd700' : locked ? '#ffffff22' : '#00f0ff';
       const textColor = done ? '#ffd700' : locked ? '#ffffff44' : '#00f0ff';
+      const card = document.createElement('div');
       Object.assign(card.style, {
         border: `2px solid ${borderColor}`,
         background: locked ? '#ffffff04' : '#00f0ff08',
-        padding: '24px',
+        padding: '22px 24px',
         cursor: locked ? 'not-allowed' : 'pointer',
         boxShadow: locked ? 'none' : `0 0 20px ${borderColor}33`,
         textAlign: 'left',
+        position: 'relative',
       });
+      const status = done ? 'COMPLETE' : locked ? 'COMING SOON' : 'READY';
       card.innerHTML = `
-        <div style="font-size:10px;letter-spacing:0.3em;opacity:0.6;color:${textColor};">CHAMBER ${String(c.idx + 1).padStart(2, '0')}${done ? ' · COMPLETE' : locked ? ' · LOCKED' : ''}</div>
-        <div style="font-size:22px;letter-spacing:0.15em;margin-top:6px;color:${textColor};">${c.name.toUpperCase()}</div>
-        <div style="font-size:12px;letter-spacing:0.2em;opacity:0.5;margin-top:12px;color:${textColor};">${c.tag}</div>
+        <div style="font-size:10px;letter-spacing:0.3em;opacity:0.6;color:${textColor};">CHAPTER ${c.code} · ${c.year} · ${status}</div>
+        <div style="font-size:22px;letter-spacing:0.18em;margin-top:8px;color:${textColor};">${c.name}</div>
+        <div style="font-size:14px;letter-spacing:0.25em;margin-top:2px;opacity:0.75;color:${textColor};">${c.zh}</div>
+        <div style="font-size:11px;letter-spacing:0.2em;opacity:0.5;margin-top:14px;color:${textColor};">${c.tag}</div>
       `;
       if (!locked) card.addEventListener('click', () => game.enterChamber(c.idx));
       list.appendChild(card);
@@ -78,7 +94,6 @@ export class ChamberSelect {
     root.querySelector('#back')?.addEventListener('click', () => game.enterTitle());
     root.querySelector('#connect')?.addEventListener('click', async () => {
       await game.chain.connect();
-      // Refresh this screen to show the connected state.
       game.enterSelect();
     });
 

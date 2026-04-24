@@ -24,7 +24,7 @@ export abstract class Chamber {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0e1a);
     this.build();
-    const titleEl = this.game.hud.title(this.title, `Chamber ${this.chamberIndex + 1} / 6`);
+    const titleEl = this.game.hud.title(this.title, `Chapter ${String(this.chamberIndex + 1).padStart(2, '0')} / 08`);
     // Fade the title after 3s so it doesn't clutter the playfield.
     setTimeout(() => {
       titleEl.style.transition = 'opacity 1.5s';
