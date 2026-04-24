@@ -121,8 +121,9 @@ export class TheDaoChamber extends Chamber {
       const ctx = canvas.getContext('2d')!;
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.NearestFilter;
+      texture.magFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
+      texture.anisotropy = 16;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.2, 1.6),
         new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }),
@@ -186,11 +187,12 @@ export class TheDaoChamber extends Chamber {
     this.podiumCanvas.width = 1024; this.podiumCanvas.height = 640;
     this.podiumCtx = this.podiumCanvas.getContext('2d')!;
     this.podiumTex = new THREE.CanvasTexture(this.podiumCanvas);
-    this.podiumTex.minFilter = THREE.LinearFilter;
-    this.podiumTex.magFilter = THREE.NearestFilter;
-    this.podiumTex.generateMipmaps = false;
+    this.podiumTex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.podiumTex.magFilter = THREE.LinearFilter;
+    this.podiumTex.generateMipmaps = true;
+    this.podiumTex.anisotropy = 16;
     this.podiumScreen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.82, 0.5),
+      new THREE.PlaneGeometry(0.92, 0.58),
       new THREE.MeshBasicMaterial({ map: this.podiumTex, toneMapped: false }),
     );
     this.podiumScreen.position.set(0, 1.1, -12.9);

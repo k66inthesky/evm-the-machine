@@ -135,35 +135,37 @@ export class WhitepaperChamber extends Chamber {
   private buildLaptop() {
     // Laptop base.
     const base = new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.03, 0.3),
+      new THREE.BoxGeometry(0.6, 0.03, 0.42),
       new THREE.MeshBasicMaterial({ color: 0x151520 }),
     );
-    base.position.set(0, 0.85, -2.5);
+    base.position.set(0, 0.85, -2.46);
     this.scene.add(base);
     // Laptop screen back (the "lid" hinged up).
     const lid = new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.28, 0.015),
+      new THREE.BoxGeometry(0.6, 0.4, 0.015),
       new THREE.MeshBasicMaterial({ color: 0x0a0a12 }),
     );
-    lid.position.set(0, 0.99, -2.62);
+    lid.position.set(0, 1.02, -2.62);
     lid.rotation.x = -0.22;
     this.scene.add(lid);
     this.laptopMesh = lid;
 
-    // Screen canvas — the draft page.
+    // Screen canvas — the draft page. Mipmaps + anisotropy avoid aliasing on a
+    // small tilted plane viewed at ~2.8m.
     this.laptopCanvas = document.createElement('canvas');
-    this.laptopCanvas.width = 1024;
-    this.laptopCanvas.height = 768;
+    this.laptopCanvas.width = 1536;
+    this.laptopCanvas.height = 1024;
     this.laptopCtx = this.laptopCanvas.getContext('2d')!;
     this.laptopTexture = new THREE.CanvasTexture(this.laptopCanvas);
-    this.laptopTexture.minFilter = THREE.LinearFilter;
-    this.laptopTexture.magFilter = THREE.NearestFilter;
-    this.laptopTexture.generateMipmaps = false;
+    this.laptopTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    this.laptopTexture.magFilter = THREE.LinearFilter;
+    this.laptopTexture.generateMipmaps = true;
+    this.laptopTexture.anisotropy = 16;
     this.laptopScreenMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.39, 0.26),
+      new THREE.PlaneGeometry(0.56, 0.38),
       new THREE.MeshBasicMaterial({ map: this.laptopTexture, toneMapped: false }),
     );
-    this.laptopScreenMesh.position.set(0, 0.99, -2.612);
+    this.laptopScreenMesh.position.set(0, 1.02, -2.612);
     this.laptopScreenMesh.rotation.x = -0.22;
     this.scene.add(this.laptopScreenMesh);
   }
@@ -172,16 +174,19 @@ export class WhitepaperChamber extends Chamber {
     // Two whiteboards flanking the desk, covered in equations drawn on canvas.
     const mk = (x: number, rotY: number, lines: string[]) => {
       const c = document.createElement('canvas');
-      c.width = 768; c.height = 1024;
+      c.width = 1024; c.height = 1536;
       const cx = c.getContext('2d')!;
       cx.fillStyle = '#f4f0e8';
       cx.fillRect(0, 0, c.width, c.height);
       cx.fillStyle = '#1a1a2a';
-      cx.font = 'bold 32px monospace';
+      cx.font = 'bold 44px monospace';
       cx.textBaseline = 'top';
-      lines.forEach((ln, i) => cx.fillText(ln, 32, 40 + i * 48));
+      lines.forEach((ln, i) => cx.fillText(ln, 44, 60 + i * 68));
       const tex = new THREE.CanvasTexture(c);
-      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.anisotropy = 16;
       const m = new THREE.Mesh(
         new THREE.PlaneGeometry(1.8, 2.4),
         new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
