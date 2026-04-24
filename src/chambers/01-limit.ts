@@ -123,7 +123,9 @@ export class LimitChamber extends Chamber {
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
     });
-    this.fps.setPosition(0, 1.65, 1.2);
+    // Spawn close to the desk so the CRT fills a readable chunk of the view
+    // on first sight — the player can still back up and walk around.
+    this.fps.setPosition(0, 1.65, -0.6);
     this.fps.setYaw(0); // face -Z (toward CRT)
     this.camera = this.fps.camera;
 
@@ -265,12 +267,12 @@ export class LimitChamber extends Chamber {
   }
 
   private buildCRT() {
-    // The CRT body — a dark cube on the desk.
+    // The CRT body — a dark cube on the desk, sized to frame the screen.
     const crtBody = new THREE.Mesh(
-      new THREE.BoxGeometry(0.82, 0.62, 0.6),
+      new THREE.BoxGeometry(1.25, 0.95, 0.6),
       new THREE.MeshBasicMaterial({ color: 0x101015 }),
     );
-    crtBody.position.set(0, 1.17, -2.5);
+    crtBody.position.set(0, 1.3, -2.5);
     this.scene.add(crtBody);
     this.crtMesh = crtBody;
 
@@ -287,10 +289,10 @@ export class LimitChamber extends Chamber {
     this.crtTexture.anisotropy = 8;
     this.crtTexture.generateMipmaps = false;
     this.crtScreen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.72, 0.54),
+      new THREE.PlaneGeometry(1.15, 0.86),
       new THREE.MeshBasicMaterial({ map: this.crtTexture, toneMapped: false }),
     );
-    this.crtScreen.position.set(0, 1.18, -2.196);
+    this.crtScreen.position.set(0, 1.3, -2.196);
     this.scene.add(this.crtScreen);
   }
 
@@ -620,16 +622,11 @@ export class LimitChamber extends Chamber {
     ctx.setTransform(SX, 0, 0, SY, 0, 0);
     const VW = 512, VH = 384;
 
-    // CRT background.
+    // CRT background. No scanlines — at texture-sampling distance they just
+    // read as visual noise and made the text look fuzzy. Clean flat field
+    // is more readable and still feels like a monitor in the dark.
     ctx.fillStyle = '#05060a';
     ctx.fillRect(0, 0, VW, VH);
-
-    // Scanlines for CRT feel — spaced in canvas pixels, so we reset the
-    // transform briefly to get crisp 1-pixel-tall lines.
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = 'rgba(0,200,255,0.05)';
-    for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
-    ctx.setTransform(SX, 0, 0, SY, 0, 0);
 
     ctx.fillStyle = '#7ac8ff';
     ctx.font = 'bold 22px monospace';
