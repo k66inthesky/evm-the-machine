@@ -57,6 +57,11 @@ export class ArchetypeTracker {
     }
     this.log.push({ chamber, kind, weights, t: Date.now() });
     this.persist();
+    // Surface a hint that the machine just recorded something. The HUD
+    // listens for this and flashes a small "MACHINE · +V +E" label so the
+    // player knows the silent tracker exists without us giving away the
+    // dimension labels — keeps the finale reveal earned. See main.ts.
+    window.dispatchEvent(new CustomEvent('archetype:gain', { detail: { weights } }));
   }
 
   /** Top N archetypes by score, ties broken by insertion order. */

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EVM: The Machine</title>
-    <meta name="description" content="Step inside the World Computer. A first-person journey through six chambers of Ethereum history. Gamedev.js Jam 2026." />
+    <meta name="description" content="Step inside the World Computer. A first-person journey through eight chapters of Ethereum history. Gamedev.js Jam 2026." />
     <style>
       :root {
         --bg: #0a0e1a;
@@ -20,11 +20,34 @@
       canvas { display: block; width: 100%; height: 100%; }
       .ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
       .ui > * { pointer-events: auto; }
+      /* Permanent vignette + scanline overlay. Cheaper than a post-process
+         pass, doesn't wash out canvas-textured screens, frames every chamber
+         consistently. Sits below the UI layer so prompts/buttons aren't
+         dimmed. The scanline is 2-px banding at very low opacity — picks up
+         the synthwave aesthetic without obscuring anything. */
+      #vignette {
+        position: fixed; inset: 0; pointer-events: none; z-index: 5;
+        background:
+          repeating-linear-gradient(180deg, transparent 0 2px, rgba(0,0,0,0.07) 2px 3px),
+          radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%);
+      }
+      /* Chamber-transition fade. Game.enterChamber() flips it on, the
+         briefing dismiss flips it off. Pointer-events:none so it never
+         blocks clicks; opacity-only animation. */
+      #fader {
+        position: fixed; inset: 0; pointer-events: none; z-index: 60;
+        background: #05060e;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+      }
+      #fader.show { opacity: 1; }
     </style>
   </head>
   <body>
     <div id="app">
       <div id="ui" class="ui"></div>
+      <div id="vignette"></div>
+      <div id="fader"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

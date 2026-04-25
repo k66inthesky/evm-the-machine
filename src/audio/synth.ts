@@ -56,14 +56,14 @@ export class SynthKit {
   playBGM(index: number) {
     this.stopBGM();
     const builders: Array<() => BGMChannel[]> = [
-      () => this.buildGenesisBGM(),   // ch0 LIMIT
-      () => this.buildVitalikBGM(),   // ch1 WHITEPAPER
-      () => this.buildDAOBGM(),       // ch2 SPACESHIP
-      () => this.buildGasStormBGM(),  // ch3 CROWDSALE
-      () => this.buildDAOBGM(),       // ch4 THE DAO
-      () => this.buildRollupBGM(),    // ch5 FORK
-      () => this.buildMergeBGM(),     // ch6 BLOOM
-      () => this.buildVitalikBGM(),   // ch7 MERGE
+      () => this.buildGenesisBGM(),    // ch0 LIMIT      — sparse pad, dorm room
+      () => this.buildVitalikBGM(),    // ch1 WHITEPAPER — contemplative, attic
+      () => this.buildDAOBGM(),        // ch2 SPACESHIP  — uneasy minor, kitchen
+      () => this.buildCrowdsaleBGM(),  // ch3 CROWDSALE  — anticipation, ticker
+      () => this.buildDAOBGM(),        // ch4 THE DAO    — re-uses unease (intentional callback)
+      () => this.buildRollupBGM(),     // ch5 FORK       — decisive arpeggio
+      () => this.buildBloomBGM(),      // ch6 BLOOM      — neon DeFi summer
+      () => this.buildMergeBGM(),      // ch7 MERGE      — hopeful, kick joins
     ];
     const builder = builders[index] ?? builders[0];
     this.currentBGM = builder();
@@ -188,6 +188,34 @@ export class SynthKit {
       ['E5', 'A5', 'C6', 'B5', null, 'A5', 'G5', 'E5'], '8n');
     const bassSeq = new Tone.Sequence((t, n) => { if (n) bass.triggerAttackRelease(n, '2n', t); }, ['A1', 'F1', 'G1', 'E1'], '1n');
     return [{ seq: padSeq, synth: pad }, { seq: leadSeq, synth: lead }, { seq: bassSeq, synth: lead, bass }];
+  }
+
+  // Crowdsale — anticipation, BTC ticker pulse. Steady eighth-note bass with
+  // a syncopated lead. Drives forward without panic.
+  private buildCrowdsaleBGM(): BGMChannel[] {
+    const lead = this.makeLead();
+    const bass = this.makeBass();
+    const kick = this.makeKick();
+    const leadSeq = new Tone.Sequence((t, n) => { if (n) lead.triggerAttackRelease(n, '8n', t); },
+      ['A4', null, 'C5', 'E5', null, 'B4', 'A4', null], '8n');
+    const bassSeq = new Tone.Sequence((t, n) => { if (n) bass.triggerAttackRelease(n, '8n', t); },
+      ['A2', 'A2', 'A2', 'A2', 'F2', 'F2', 'G2', 'G2'], '8n');
+    const kickSeq = new Tone.Sequence((t) => kick.triggerAttackRelease('C1', '8n', t), [1, null, 1, null], '4n');
+    return [{ seq: leadSeq, synth: lead }, { seq: bassSeq, synth: lead, bass }, { seq: kickSeq, synth: lead, drum: kick }];
+  }
+
+  // Bloom — neon DeFi summer. Bright wide-spread chords + a high arpeggio
+  // that never quite resolves. Feels like four screens going at once.
+  private buildBloomBGM(): BGMChannel[] {
+    const pad = this.makePad();
+    const lead = this.makeLead();
+    const bass = this.makeBass();
+    const padSeq = new Tone.Sequence((t, c) => { if (c) pad.triggerAttackRelease(c, '1n', t); },
+      [['A3', 'E4', 'A4'], ['F3', 'C4', 'F4'], ['G3', 'D4', 'G4'], ['E3', 'B3', 'E4']], '1n');
+    const arpSeq = new Tone.Sequence((t, n) => { if (n) lead.triggerAttackRelease(n, '16n', t); },
+      ['A5', 'C6', 'E6', 'C6', 'B5', 'D6', 'F6', 'D6'], '16n');
+    const bassSeq = new Tone.Sequence((t, n) => { if (n) bass.triggerAttackRelease(n, '4n', t); }, ['A1', 'F1', 'G1', 'E1'], '2n');
+    return [{ seq: padSeq, synth: pad }, { seq: arpSeq, synth: lead }, { seq: bassSeq, synth: lead, bass }];
   }
 
   private buildFinaleBGM(): BGMChannel[] {

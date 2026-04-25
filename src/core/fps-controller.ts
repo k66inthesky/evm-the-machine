@@ -28,6 +28,12 @@ export class FPSController {
   private yaw = 0;
   private pitch = 0;
   private grounded = true;
+  // Walking head-bob: a small vertical offset added to the camera each frame
+  // when the player is moving. Phase advances with travel distance so it
+  // feels like footsteps, not just a sine over time. Subtle enough not to
+  // induce nausea (~3 cm peak) but adds the bodily presence the chambers
+  // were missing.
+  private bobPhase = 0;
   cfg: Required<FPSConfig>;
 
   constructor(cfg: FPSConfig = {}) {
@@ -104,7 +110,13 @@ export class FPSController {
       this.grounded = false;
     }
 
+    // Head-bob: advance phase by travel distance, ease toward zero when idle
+    // so the camera doesn't snap back to centre on stop.
+    const moved = wish.length();
+    if (moved > 0) this.bobPhase += moved * 8;
+    const targetBob = moved > 0 ? Math.sin(this.bobPhase) * 0.03 : 0;
     this.camera.position.copy(this.position);
+    this.camera.position.y += targetBob;
   }
 
   private applyRotation() {

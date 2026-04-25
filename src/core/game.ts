@@ -116,12 +116,21 @@ export class Game {
   }
 
   enterChamber(index: number) {
+    // Brief fade-to-black during the swap so chambers don't cut hard. The
+    // fader element is opacity-only (no pointer-events change) so the
+    // briefing card underneath is still clickable the moment it lands.
+    const fader = document.getElementById('fader');
+    fader?.classList.add('show');
     this.teardown();
     this.state = { kind: 'chamber', index };
     this.activeChamber = this.buildChamber(index);
     this.activeChamber.mount(this);
     this.input.requestPointer();
     this.audio.playChamberBGM(index);
+    // Fade back in after a short pause so the new scene has time to render
+    // before the overlay clears. setTimeout (not rAF) because backgrounded
+    // tabs throttle rAF to ~1Hz and the fader would stick in that case.
+    setTimeout(() => fader?.classList.remove('show'), 60);
   }
 
   finishChamber(index: number) {
