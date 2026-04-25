@@ -49,6 +49,10 @@ export class MergeChamber extends Chamber {
   private phase: 'intro' | 'active' | 'merged' | 'walked-out' | 'exiting' = 'intro';
   private pickedChoice: Choice | null = null;
   private prompt: HTMLDivElement | null = null;
+  // Persistent HUD banner shown after a choice — tells the player to walk to
+  // the EXIT regardless of where they're currently looking (the targeted
+  // prompt only triggers when they aim at the door, which they may not be).
+  private exitBanner: HTMLDivElement | null = null;
   private t = 0;
   private readonly ROOM = { xMin: -5, xMax: 5, zMin: -7, zMax: 4 };
 
@@ -351,6 +355,7 @@ export class MergeChamber extends Chamber {
       // press E (the witness pose).
       this.phase = 'walked-out';
       this.setObjective('WALK TO THE EXIT · PRESS E');
+      this.showExitBanner('WALK TO THE EXIT DOOR · PRESS  E  TO LEAVE');
       return;
     }
 
@@ -360,6 +365,7 @@ export class MergeChamber extends Chamber {
     // skip and gives the player a beat to see the room go quiet.
     this.phase = 'merged';
     this.setObjective('THE MACHINE GOES QUIET · WALK TO THE EXIT · PRESS E');
+    this.showExitBanner('THE MACHINE GOES QUIET · WALK TO THE EXIT · PRESS  E');
     const delayPer = c.key === '2' ? 220 : c.key === '3' ? 180 : 120;
     this.minerRows.forEach((m, i) => {
       setTimeout(() => {
@@ -395,6 +401,40 @@ export class MergeChamber extends Chamber {
     if (!this.prompt) this.prompt = this.game.hud.prompt(text);
     else this.prompt.textContent = text;
     this.prompt.style.opacity = '1';
+  }
+
+  /**
+   * Persistent on-screen banner shown after the player picks a choice.
+   * Lives at top-center, well above the crosshair, and stays visible no
+   * matter where the player looks — the targeted prompt at the door only
+   * fires when they aim at it, which they may not yet be doing. Cleared
+   * automatically when the chamber disposes (the host element gets nuked).
+   */
+  private showExitBanner(text: string) {
+    if (!this.exitBanner) {
+      this.exitBanner = this.game.hud.element('', {
+        position: 'absolute', left: '50%', top: '64px',
+        transform: 'translateX(-50%)',
+        padding: '14px 26px',
+        border: '1px solid #80ffa0aa',
+        background: '#0a1810ee',
+        color: '#80ffa0',
+        fontFamily: 'Courier New, monospace',
+        fontSize: '14px',
+        letterSpacing: '0.32em',
+        textShadow: '0 0 10px #80ffa088',
+        boxShadow: '0 0 24px #80ffa033',
+        pointerEvents: 'none',
+        zIndex: '40',
+        whiteSpace: 'nowrap',
+        opacity: '0',
+        transition: 'opacity 0.6s',
+      });
+    }
+    this.exitBanner.textContent = text;
+    // Use a microtask + setTimeout so the transition fires reliably in
+    // backgrounded tabs (rAF gets throttled there).
+    setTimeout(() => { if (this.exitBanner) this.exitBanner.style.opacity = '1'; }, 16);
   }
 }
 

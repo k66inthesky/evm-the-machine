@@ -80,12 +80,42 @@ export class Chain {
 
   // ── MetaMask / injected ────────────────────────────────────────────────
 
+  /**
+   * Find the actual MetaMask provider. Modern browsers commonly have multiple
+   * wallet extensions installed (Binance Wallet, OKX Wallet, Coinbase Wallet,
+   * Rabby, Phantom, etc.) and the legacy `window.ethereum` global gets
+   * clobbered by whichever loaded last. EIP-6963 fixes this with announce/
+   * request events; we listen briefly, then fall back to providers.find or
+   * window.ethereum.
+   */
+  private async findMetaMaskProvider(): Promise<any> {
+    const collected: any[] = [];
+    const onAnnounce = (e: any) => collected.push(e.detail);
+    window.addEventListener('eip6963:announceProvider', onAnnounce);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    await new Promise((r) => setTimeout(r, 80));
+    window.removeEventListener('eip6963:announceProvider', onAnnounce);
+
+    const isMM = (info: any) => /metamask/i.test(info?.info?.name || '') || info?.info?.rdns === 'io.metamask';
+    const found = collected.find(isMM);
+    if (found) return found.provider;
+    if (collected.length > 0) return collected[0].provider; // any wallet beats none
+    const eth: any = (window as any).ethereum;
+    if (!eth) return null;
+    if (eth.providers && Array.isArray(eth.providers)) {
+      const mm = eth.providers.find((p: any) => p?.isMetaMask);
+      if (mm) return mm;
+      return eth.providers[0];
+    }
+    return eth;
+  }
+
   async connect(): Promise<ChainStatus> {
-    if (!this.hasInjectedWallet) return { kind: 'no-wallet' };
-    const eth = (window as any).ethereum;
+    const provider = await this.findMetaMaskProvider();
+    if (!provider) return { kind: 'no-wallet' };
     let accounts: string[];
     try {
-      accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
+      accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
     } catch (e: any) {
       // EIP-1193: code 4001 = user rejected. Anything else we treat as no-wallet.
       if (e?.code === 4001) return { kind: 'rejected' };
@@ -93,16 +123,16 @@ export class Chain {
     }
     if (!accounts || accounts.length === 0) return { kind: 'rejected' };
     this.address = accounts[0] as Address;
-    this.wallet = createWalletClient({ chain: sepolia, transport: custom(eth) });
+    this.wallet = createWalletClient({ chain: sepolia, transport: custom(provider) });
     this.connectedVia = 'metamask';
     let chainId = sepolia.id;
     try {
-      const chainIdHex = await eth.request({ method: 'eth_chainId' }) as string;
+      const chainIdHex = await provider.request({ method: 'eth_chainId' }) as string;
       chainId = parseInt(chainIdHex, 16);
     } catch { /* assume sepolia */ }
     if (chainId !== sepolia.id) {
       try {
-        await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${sepolia.id.toString(16)}` }] });
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${sepolia.id.toString(16)}` }] });
       } catch {
         // User declined the switch (or the chain isn't added). Either way, leave
         // them connected on the wrong chain so we can surface a clear message.

@@ -43,11 +43,15 @@ export class ChamberSelect {
       overflow: 'auto',
     });
 
+    // Wallet area — either shows the connected address, or a pair of buttons
+    // (Google + MetaMask). Buttons surface specific status messages inline
+    // instead of silently failing like the old single CONNECT WALLET button.
     const walletInfo = game.chain.connectedAddress
-      ? `<span style="color:#ffd700;">${short(game.chain.connectedAddress)}</span>`
-      : game.chain.hasWallet
-        ? '<button id="connect" style="background:transparent;border:1px solid #8a00f0;color:#8a00f0;padding:6px 18px;font-family:inherit;font-size:12px;letter-spacing:0.2em;cursor:pointer;">CONNECT WALLET</button>'
-        : '<span style="opacity:0.5;font-size:12px;">NO WALLET — OFFLINE MODE</span>';
+      ? `<span style="color:#ffd700;">${short(game.chain.connectedAddress)} <span style="opacity:0.5;font-size:10px;">(${game.chain.connectedVia_ || 'wallet'})</span></span>`
+      : `<span id="walletButtons" style="display:inline-flex;gap:8px;">
+           <button id="connectGoogle" style="background:#fff;border:1px solid #fff;color:#1a1a2a;padding:6px 14px;font-family:inherit;font-size:11px;letter-spacing:0.2em;cursor:pointer;font-weight:bold;">GOOGLE</button>
+           <button id="connectMM" style="background:transparent;border:1px solid #ffa040;color:#ffa040;padding:6px 14px;font-family:inherit;font-size:11px;letter-spacing:0.2em;cursor:pointer;">METAMASK</button>
+         </span>`;
 
     root.innerHTML = `
       <div style="font-size:28px;letter-spacing:0.3em;text-shadow:0 0 12px #00f0ff;">EVM — THE MACHINE</div>
@@ -60,6 +64,7 @@ export class ChamberSelect {
         <span>·</span>
         <button id="back" style="background:transparent;border:1px solid #00f0ff55;color:#00f0ff99;padding:6px 18px;font-family:inherit;font-size:12px;letter-spacing:0.2em;cursor:pointer;">&lt; TITLE</button>
       </div>
+      <div id="walletStatus" style="margin-top:14px;font-size:11px;letter-spacing:0.2em;min-height:14px;color:#ffd070;text-align:center;max-width:720px;"></div>
     `;
 
     const list = root.querySelector('#list') as HTMLDivElement;
@@ -89,9 +94,39 @@ export class ChamberSelect {
     }
 
     root.querySelector('#back')?.addEventListener('click', () => game.enterTitle());
-    root.querySelector('#connect')?.addEventListener('click', async () => {
-      await game.chain.connect();
-      game.enterSelect();
+
+    const status = root.querySelector('#walletStatus') as HTMLDivElement;
+    const buttons = root.querySelector('#walletButtons') as HTMLDivElement | null;
+    const setBusy = (msg: string) => {
+      if (status) status.textContent = msg;
+      if (buttons) buttons.style.opacity = '0.5';
+    };
+    const setIdle = (msg: string) => {
+      if (status) status.textContent = msg;
+      if (buttons) buttons.style.opacity = '1';
+    };
+    const onConnected = (addrShort: string, via: string) => {
+      if (buttons) buttons.innerHTML = `<span style="color:#ffd700;">${addrShort} <span style="opacity:0.5;font-size:10px;">(${via})</span></span>`;
+      setIdle('CONNECTED · YOU CAN MINT THE JOURNEY NFT FROM THE FINALE SCREEN');
+    };
+
+    root.querySelector('#connectMM')?.addEventListener('click', async () => {
+      setBusy('OPENING METAMASK…');
+      const r = await game.chain.connect();
+      if (r.kind === 'connected') onConnected(short(r.address), 'metamask');
+      else if (r.kind === 'no-wallet') setIdle('NO METAMASK DETECTED · INSTALL METAMASK OR USE GOOGLE');
+      else if (r.kind === 'rejected') setIdle('METAMASK REQUEST REJECTED · TRY AGAIN OR USE GOOGLE');
+      else if (r.kind === 'wrong-chain') setIdle(`WRONG NETWORK (CHAIN ${r.chainId}) · SWITCH TO SEPOLIA IN METAMASK`);
+      else setIdle('CONNECTION FAILED · TRY GOOGLE');
+    });
+
+    root.querySelector('#connectGoogle')?.addEventListener('click', async () => {
+      setBusy('OPENING GOOGLE LOGIN…');
+      const r = await game.chain.connectWithGoogle();
+      if (r.kind === 'connected') onConnected(short(r.address), 'google');
+      else if (r.kind === 'no-google-config') setIdle('GOOGLE LOGIN NEEDS A FREE THIRDWEB CLIENT ID — SET VITE_THIRDWEB_CLIENT_ID IN .env (see submission/DEPLOY.md)');
+      else if (r.kind === 'google-cancelled') setIdle('GOOGLE LOGIN CANCELLED · TRY AGAIN OR USE METAMASK');
+      else setIdle('CONNECTION FAILED · TRY METAMASK');
     });
 
     host.appendChild(root);
