@@ -21,12 +21,26 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
         manualChunks(id) {
-          if (id.includes('node_modules/thirdweb')) return 'thirdweb';
-          if (id.includes('node_modules/ox')) return 'thirdweb';
-          if (id.includes('node_modules/@noble')) return 'noble-crypto';
-          if (id.includes('node_modules/viem')) return 'viem';
-          if (id.includes('node_modules/three')) return 'three';
-          if (id.includes('node_modules/tone')) return 'tone';
+          // Collapse ONLY the thirdweb tree (which is what blew the file
+          // count — ~460 chain-defs + ~460 wallet icons). thirdweb pulls
+          // its own copy of viem + noble + ox internally, so we bucket
+          // those WITH thirdweb to avoid cross-chunk TDZ errors at boot.
+          //
+          // Earlier attempt split viem into its own chunk too — that
+          // broke at runtime with "Cannot access 'Va' before initialization"
+          // because thirdweb's chunk referenced the viem chunk before
+          // viem's module body had executed. Keeping them together fixes it.
+          //
+          // viem used directly from src/chain/chain.ts (the public RPC
+          // client) is a STATIC import, so Rollup keeps that copy in the
+          // main index chunk — the home screen still doesn't pay the
+          // thirdweb cost until the player clicks CLAIM WITH GOOGLE.
+          if (
+            id.includes('node_modules/thirdweb') ||
+            id.includes('node_modules/ox')
+          ) {
+            return 'thirdweb';
+          }
           return undefined;
         },
       },
