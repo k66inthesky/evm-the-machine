@@ -122,6 +122,7 @@ export class LimitChamber extends Chamber {
       sprintSpeed: 3.8,
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
+      onFootstep: () => this.game.audio.playSFX('step'),
     });
     // Spawn close to the desk so the CRT fills a readable chunk of the view
     // on first sight — the player can still back up and walk around.

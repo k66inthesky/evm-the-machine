@@ -79,6 +79,7 @@ export class BloomChamber extends Chamber {
       eyeHeight: 1.65, walkSpeed: 3.0, sprintSpeed: 4.4,
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
+      onFootstep: () => this.game.audio.playSFX('step'),
     });
     this.fps.setPosition(0, 1.65, 3.2);
     this.fps.setYaw(0);

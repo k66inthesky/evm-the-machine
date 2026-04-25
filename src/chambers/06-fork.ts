@@ -66,6 +66,7 @@ export class ForkChamber extends Chamber {
       eyeHeight: 1.65, walkSpeed: 2.8, sprintSpeed: 4.2,
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
+      onFootstep: () => this.game.audio.playSFX('step'),
     });
     this.fps.setPosition(0, 1.65, 2);
     this.fps.setYaw(0);

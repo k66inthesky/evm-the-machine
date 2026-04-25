@@ -59,6 +59,7 @@ export class SpaceshipChamber extends Chamber {
       eyeHeight: 1.65, walkSpeed: 2.8, sprintSpeed: 4.0,
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
+      onFootstep: () => this.game.audio.playSFX('step'),
     });
     this.fps.setPosition(0, 1.65, 2.5);
     this.fps.setYaw(0);

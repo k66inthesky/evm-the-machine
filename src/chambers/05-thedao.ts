@@ -58,6 +58,7 @@ export class TheDaoChamber extends Chamber {
       eyeHeight: 1.65, walkSpeed: 2.9, sprintSpeed: 4.2,
       canMoveTo: (p) => this.canMoveTo(p),
       onGroundHeight: () => 0,
+      onFootstep: () => this.game.audio.playSFX('step'),
     });
     this.fps.setPosition(0, 1.65, 1);
     this.fps.setYaw(0);

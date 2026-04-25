@@ -224,7 +224,7 @@ export class SynthKit {
 
   // --- SFX ---------------------------------------------------------------
 
-  playSFX(kind: 'interact' | 'win' | 'hit' | 'jump' | 'merge' | 'mint' | 'damage' | 'portal') {
+  playSFX(kind: 'interact' | 'win' | 'hit' | 'jump' | 'merge' | 'mint' | 'damage' | 'portal' | 'step') {
     const now = Tone.now();
     switch (kind) {
       case 'interact': this.blip(880, 0.08, now); break;
@@ -235,7 +235,118 @@ export class SynthKit {
       case 'mint':     this.arp([523, 659, 784, 1047, 1319], 0.15, now); break;
       case 'damage':   this.blip(180, 0.12, now, 'sawtooth'); break;
       case 'portal':   this.sweep(110, 880, 0.4, now); break;
+      // Footstep — soft low thud + tiny pitch jitter so left/right feet
+      // don't sound identical. Fired by the FPS controller every other
+      // bob cycle to match the visual head-bob cadence.
+      case 'step':     this.thud(60 + Math.random() * 18, 0.05, now); break;
     }
+  }
+
+  private thud(freq: number, dur: number, time: number) {
+    const s = new Tone.MembraneSynth({
+      pitchDecay: 0.04, octaves: 4,
+      envelope: { attack: 0.001, decay: dur, sustain: 0, release: 0.05 },
+      volume: -22,
+    }).toDestination();
+    s.triggerAttackRelease(freq, dur, time);
+    setTimeout(() => s.dispose(), (dur + 0.3) * 1000);
+  }
+
+  // ── Ambient layers ─────────────────────────────────────────────────────
+  // Per-chamber ambient noise (typing, server fans, market chatter, etc.) —
+  // a separate channel from BGM so it can fade independently. Each chamber
+  // calls `playAmbient(kind)` in its build() and `stopAmbient()` is called
+  // from `stopBGM()` so transitions are clean.
+  private ambient: { node: any; lp?: any; gain: Tone.Gain } | null = null;
+
+  playAmbient(kind: 'typewriter' | 'serverhum' | 'marketchatter' | 'attichum' | 'machinedrone' | null) {
+    this.stopAmbient();
+    if (kind === null) return;
+    const gain = new Tone.Gain(0).connect(this.master);
+    let node: any = null;
+    let lp: any = null;
+    if (kind === 'typewriter') {
+      // Sparse high-frequency noise pops at irregular intervals — feels like
+      // a person typing in another room. Used in WHITEPAPER + LIMIT.
+      const noise = new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: { attack: 0.001, decay: 0.02, sustain: 0, release: 0.02 },
+        volume: -28,
+      }).connect(gain);
+      node = noise;
+      const fire = () => {
+        if (this.ambient?.node !== noise) return;
+        try { noise.triggerAttackRelease('16n'); } catch {}
+        setTimeout(fire, 80 + Math.random() * 380);
+      };
+      fire();
+      gain.gain.rampTo(1, 1.5);
+    } else if (kind === 'serverhum') {
+      // Low-frequency drone with a slight high-frequency hiss layer — server
+      // room. Used in CROWDSALE + MERGE.
+      const drone = new Tone.Oscillator({ type: 'sawtooth', frequency: 55, volume: -32 }).start();
+      const hiss = new Tone.Noise('pink').start();
+      lp = new Tone.Filter({ type: 'lowpass', frequency: 800 });
+      hiss.volume.value = -38;
+      drone.connect(lp);
+      hiss.connect(lp);
+      lp.connect(gain);
+      node = { drone, hiss };
+      gain.gain.rampTo(1, 2);
+    } else if (kind === 'marketchatter') {
+      // Mid-frequency rumbling noise + occasional pings — trading floor.
+      // Used in BLOOM.
+      const rumble = new Tone.Noise('brown').start();
+      lp = new Tone.Filter({ type: 'bandpass', frequency: 350, Q: 0.6 });
+      rumble.volume.value = -28;
+      rumble.connect(lp); lp.connect(gain);
+      node = { rumble };
+      const ping = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 }, volume: -28 }).connect(this.reverb);
+      const pingFire = () => {
+        if (this.ambient?.node !== node) return;
+        try { ping.triggerAttackRelease(800 + Math.random() * 600, '32n'); } catch {}
+        setTimeout(pingFire, 600 + Math.random() * 1400);
+      };
+      pingFire();
+      gain.gain.rampTo(1, 2);
+    } else if (kind === 'attichum') {
+      // Wind through old wood — narrow-band brown noise. WHITEPAPER attic.
+      const wind = new Tone.Noise('brown').start();
+      lp = new Tone.Filter({ type: 'lowpass', frequency: 200 });
+      wind.volume.value = -26;
+      wind.connect(lp); lp.connect(gain);
+      node = { wind };
+      gain.gain.rampTo(1, 2);
+    } else if (kind === 'machinedrone') {
+      // Mid-bass throb — the world computer breathing. THE DAO + FORK.
+      const drone = new Tone.Oscillator({ type: 'sawtooth', frequency: 88, volume: -30 }).start();
+      const lfo = new Tone.LFO({ frequency: 0.15, min: 0.6, max: 1 }).start();
+      lp = new Tone.Filter({ type: 'lowpass', frequency: 320 });
+      drone.connect(lp); lp.connect(gain);
+      lfo.connect(gain.gain);
+      node = { drone, lfo };
+      gain.gain.rampTo(0.85, 2);
+    }
+    this.ambient = { node, lp, gain };
+  }
+
+  stopAmbient() {
+    if (!this.ambient) return;
+    const a = this.ambient;
+    this.ambient = null;
+    a.gain.gain.rampTo(0, 0.4);
+    setTimeout(() => {
+      try {
+        if (a.node?.drone) { a.node.drone.stop(); a.node.drone.dispose(); }
+        if (a.node?.hiss) { a.node.hiss.stop(); a.node.hiss.dispose(); }
+        if (a.node?.rumble) { a.node.rumble.stop(); a.node.rumble.dispose(); }
+        if (a.node?.wind) { a.node.wind.stop(); a.node.wind.dispose(); }
+        if (a.node?.lfo) { a.node.lfo.stop(); a.node.lfo.dispose(); }
+        if (typeof a.node?.dispose === 'function') a.node.dispose();
+        a.lp?.dispose?.();
+        a.gain.dispose();
+      } catch {}
+    }, 500);
   }
 
   private blip(freq: number, dur: number, time: number, type: OscillatorType = 'sine') {

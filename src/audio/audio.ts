@@ -31,17 +31,31 @@ export class Audio {
 
   playChamberBGM(index: number) {
     this.kit?.playBGM(index);
+    // One ambient layer per chamber. Reused moods by chapter group.
+    const ambients: Array<'typewriter' | 'attichum' | 'serverhum' | 'marketchatter' | 'machinedrone' | null> = [
+      'typewriter',     // ch0 LIMIT
+      'attichum',       // ch1 WHITEPAPER
+      'attichum',       // ch2 SPACESHIP
+      'serverhum',      // ch3 CROWDSALE
+      'machinedrone',   // ch4 THE DAO
+      'machinedrone',   // ch5 FORK
+      'marketchatter',  // ch6 BLOOM
+      'serverhum',      // ch7 MERGE
+    ];
+    this.kit?.playAmbient(ambients[index] ?? null);
   }
 
   playFinale() {
     this.kit?.playFinale();
+    this.kit?.playAmbient(null);
   }
 
   stopBGM() {
     this.kit?.stopBGM();
+    this.kit?.stopAmbient();
   }
 
-  playSFX(kind: 'interact' | 'win' | 'hit' | 'jump' | 'merge' | 'mint' | 'damage' | 'portal') {
+  playSFX(kind: 'interact' | 'win' | 'hit' | 'jump' | 'merge' | 'mint' | 'damage' | 'portal' | 'step') {
     this.kit?.playSFX(kind);
   }
 }

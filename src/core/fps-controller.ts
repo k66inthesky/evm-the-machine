@@ -19,6 +19,9 @@ export interface FPSConfig {
   eyeHeight?: number;
   canMoveTo?: (next: THREE.Vector3) => boolean;
   onGroundHeight?: (pos: THREE.Vector3) => number | null;
+  /** Called once per visual head-bob cycle while moving — chambers wire
+   *  this to the audio kit's 'step' SFX so footsteps match the bob. */
+  onFootstep?: () => void;
 }
 
 export class FPSController {
@@ -46,6 +49,7 @@ export class FPSController {
       eyeHeight: 1.6,
       canMoveTo: () => true,
       onGroundHeight: () => 0,
+      onFootstep: () => {},
       ...cfg,
     };
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -111,9 +115,18 @@ export class FPSController {
     }
 
     // Head-bob: advance phase by travel distance, ease toward zero when idle
-    // so the camera doesn't snap back to centre on stop.
+    // so the camera doesn't snap back to centre on stop. Fire a footstep
+    // SFX whenever the bob crosses a downstroke (sin transitions through
+    // zero descending) — that's when a real foot would hit the floor.
     const moved = wish.length();
-    if (moved > 0) this.bobPhase += moved * 8;
+    if (moved > 0) {
+      const prevPhase = this.bobPhase;
+      this.bobPhase += moved * 8;
+      const prevSin = Math.sin(prevPhase);
+      const newSin = Math.sin(this.bobPhase);
+      // Downstroke crossing: prev positive, now negative.
+      if (prevSin > 0 && newSin <= 0) this.cfg.onFootstep();
+    }
     const targetBob = moved > 0 ? Math.sin(this.bobPhase) * 0.03 : 0;
     this.camera.position.copy(this.position);
     this.camera.position.y += targetBob;
