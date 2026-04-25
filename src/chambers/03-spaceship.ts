@@ -61,7 +61,7 @@ export class SpaceshipChamber extends Chamber {
       onGroundHeight: () => 0,
     });
     this.fps.setPosition(0, 1.65, 2.5);
-    this.fps.setYaw(Math.PI);
+    this.fps.setYaw(0);
     this.camera = this.fps.camera;
 
     this.renderScreen();

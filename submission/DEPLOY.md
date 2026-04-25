@@ -6,7 +6,7 @@ for the three upload steps that require your browser login.
 ## 1. GitHub (Open Source track) — ✅ DONE
 
 - Repo: https://github.com/k66inthesky/evm-the-machine
-- Public, MIT, 4 commits, 12 jam topics.
+- Public, MIT, 12 jam topics.
 - Nothing more to do unless you want to add a release tag: `gh release create jam2026 submission/build.zip --title "Gamedev.js Jam 2026 submission"`.
 
 ## 2. itch.io (main jam submission)
@@ -21,7 +21,7 @@ for the three upload steps that require your browser login.
    - **Upload**: `submission/build.zip` → tick "This file will be played in the browser".
    - **Embed options**: 1280×720, enable fullscreen button.
    - **Cover image**: `submission/cover.png` (630×500).
-   - **Screenshots**: drag all six `submission/screenshot-*.png`.
+   - **Screenshots**: drag all eight `submission/screenshot-NN-*.png` (LIMIT · WHITEPAPER · SPACESHIP · CROWDSALE · THE DAO · FORK · BLOOM · MERGE).
    - **Description**: paste `submission/description.md` (itch converts markdown).
    - **Genre**: Action · **Tags**: `3d`, `ethereum`, `first-person`, `procedural-generation`, `synthwave`, `threejs`, `web3`, `webgl`.
    - **Pricing**: No payments.

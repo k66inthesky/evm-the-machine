@@ -81,7 +81,7 @@ export class BloomChamber extends Chamber {
       onGroundHeight: () => 0,
     });
     this.fps.setPosition(0, 1.65, 3.2);
-    this.fps.setYaw(Math.PI);
+    this.fps.setYaw(0);
     this.camera = this.fps.camera;
 
     this.installBriefing({

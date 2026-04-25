@@ -37,11 +37,19 @@ export class Renderer {
 
     this.composer = new EffectComposer(this.gl);
     // RenderPass and bloom are re-attached per-scene in render().
+    // Bloom threshold lifted from 0.15 → 0.7 because every chamber's diegetic
+    // canvas screens use light backgrounds (~#f0efe3 whiteboards, #f6f2e8
+    // laptop pages) and toneMapped:false materials, which all sit above 0.15
+    // in linear space. The old threshold blew the whiteboards and laptops
+    // into solid white halos and made the on-screen text unreadable. 0.7
+    // keeps the synthwave glow on actual neon (cyan/magenta accents, lit
+    // ether crystals, terminal text) while letting paper/screen surfaces
+    // stay legible.
     this.bloom = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      /* strength */ 1.2,
-      /* radius */ 0.6,
-      /* threshold */ 0.15,
+      /* strength */ 0.85,
+      /* radius */ 0.5,
+      /* threshold */ 0.7,
     );
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
