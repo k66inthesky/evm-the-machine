@@ -29,7 +29,7 @@ Three.js · Vite · viem · Tone.js · Foundry · Solidity
 
 ## Links
 - **Source**: [github.com/k66inthesky/evm-the-machine](https://github.com/k66inthesky/evm-the-machine) (MIT)
-- **Contract on Sepolia**: [`0xDc605783C5bad53F0Bf4a329fe1f833045dD521B`](https://sepolia.etherscan.io/address/0xDc605783C5bad53F0Bf4a329fe1f833045dD521B)
+- **Contract on Sepolia**: [`0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB`](https://sepolia.etherscan.io/address/0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB)
 
 ## Credits
 Design, code, and audio: **k66**

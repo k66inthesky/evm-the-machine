@@ -46,28 +46,28 @@ Then on https://wavedash.com/, open the game → "Submit to jam" → pick
 **Gamedev.js Jam 2026** → the Wavedash Challenge is auto-selected for
 Wavedash-deployed submissions.
 
-## 4. Sepolia contract — ⚠️ RE-DEPLOY REQUIRED FOR v2
+## 4. Sepolia contract — ✅ v2 ERC-721 LIVE
 
-The v1 deployment (`0xDc60…521B`) is the old 6-chamber scoreboard — keep it
-as a historical record, but the v2 frontend talks to a new contract. The
-v2 `EVMHistorian.sol` is now a **soulbound ERC-721** with `tokenURI` that
-points at the Crowdsale chapter screenshot, so wallets / OpenSea render the
-NFT inline.
+- **Address**: [`0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB`](https://sepolia.etherscan.io/address/0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB)
+- **Standard**: soulbound ERC-721 with on-chain `tokenURI` (data: URI; image
+  served from the GitHub raw of `submission/cover.png`).
+- **Mint cost for the player**: zero gas via the Google-login path (paymaster);
+  ~10k gas on the MetaMask path on Sepolia (free testnet ETH).
+- v1 deployment (`0xDc60…521B`) is still on chain as a historical record.
+
+If the source ever changes again:
 
 ```bash
 cd contracts
-cp ../.env.example ../.env  # if you haven't already
-$EDITOR ../.env             # set DEPLOYER_PRIVATE_KEY + SEPOLIA_RPC_URL
+$EDITOR ../.env             # confirm DEPLOYER_PRIVATE_KEY + SEPOLIA_RPC_URL
 forge create src/EVMHistorian.sol:EVMHistorian \
-  --rpc-url $SEPOLIA_RPC_URL \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com \
   --private-key $DEPLOYER_PRIVATE_KEY \
   --broadcast
 # Copy the deployed address into the project root .env:
 #   VITE_HISTORIAN_ADDRESS=0x...
+# Then npm run release && re-upload submission/build.zip.
 ```
-
-After deploy, regenerate `submission/build.zip` so the on-itch upload picks
-up the new address: `npm run build && cd dist && zip -r ../submission/build.zip .`.
 
 ## 5. thirdweb (for the "Login with Google" mint path)
 

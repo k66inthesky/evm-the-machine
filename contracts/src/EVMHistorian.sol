@@ -25,7 +25,7 @@ pragma solidity ^0.8.24;
  * v2 cover artwork) so any wallet UI can render it.
  */
 contract EVMHistorian {
-    string public constant name = "EVM: The Machine — Journey";
+    string public constant name = "EVM: The Machine - Journey";
     string public constant symbol = "JOURNEY";
 
     uint8 public constant TOTAL_CHAMBERS = 8;
@@ -65,11 +65,18 @@ contract EVMHistorian {
         emit ChamberCompleted(msg.sender, index, block.timestamp);
     }
 
-    /// Mint the Journey NFT once all eight chambers are complete. Caller can
-    /// mint only once; subsequent calls revert.
+    /// Mint the Journey NFT. The finale screen client-side gates this on
+    /// progress.completedCount() == 8 so we don't double-gate on-chain — the
+    /// player has earned the right to mint by reaching the finale, and
+    /// requiring eight prior `markChamber` transactions would mean nine
+    /// wallet signatures per playthrough (a non-starter for the Google /
+    /// smart-wallet UX). The mint is one-per-wallet. The completionSeconds
+    /// argument is recorded as a permanent attribute on the token.
     function mintJourney(uint256 completionSeconds) external returns (uint256 tokenId) {
-        require(progress[msg.sender] == ALL_DONE, "journey incomplete");
         require(journeyOf[msg.sender] == 0, "already minted");
+        // Mark the bitmap as fully complete at mint time so progressOf()
+        // reads correctly for any future contract integrations.
+        progress[msg.sender] = ALL_DONE;
         tokenId = ++totalJourneys;
         _owners[tokenId] = msg.sender;
         _balances[msg.sender] += 1;
@@ -101,9 +108,9 @@ contract EVMHistorian {
         // Build the JSON inline. Wallets accept data:application/json;utf8,…
         // — no base64 needed if we keep the JSON ASCII-clean.
         return string.concat(
-            'data:application/json;utf8,{"name":"EVM: The Machine — Journey #',
+            'data:application/json;utf8,{"name":"EVM: The Machine - Journey #',
             _toString(tokenId),
-            '","description":"Souvenir for completing all eight chapters of EVM: The Machine. The bearer walked the World Computer — Limit, Whitepaper, Spaceship, Crowdsale, The DAO, Fork, Bloom, Merge.","image":"',
+            '","description":"Souvenir for completing all eight chapters of EVM: The Machine. The bearer walked the World Computer - Limit, Whitepaper, Spaceship, Crowdsale, The DAO, Fork, Bloom, Merge.","image":"',
             IMAGE_URL,
             '","external_url":"',
             EXTERNAL_URL,
