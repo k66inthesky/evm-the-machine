@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release": "vite build && node scripts/zip-dist.mjs"
   },
   "dependencies": {
     "thirdweb": "^5.119.4",
