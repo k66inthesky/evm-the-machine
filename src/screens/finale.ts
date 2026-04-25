@@ -53,7 +53,7 @@ export class FinaleScreen {
         <img src="${NFT_PREVIEW_URL}" alt="Journey NFT artwork"
              style="display:block;width:100%;max-width:520px;margin:14px auto 0;border:1px solid #ffd70033;background:#000;" />
         <div style="font-size:12px;letter-spacing:0.18em;opacity:0.65;margin-top:12px;line-height:1.7;">
-          The artwork is the Crowdsale chapter — Day 37 of 42, ether on the wire.<br/>
+          The artwork is the EVM: The Machine cover — neon EVM hero on the BLOOM trading-floor.<br/>
           Soulbound: it stays in the wallet that earned it.
         </div>
       </div>

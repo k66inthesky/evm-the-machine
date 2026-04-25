@@ -38,17 +38,34 @@ export class SynthKit {
   /**
    * One composition per chamber. All share the same key (A minor) so moving
    * between chambers doesn't sound jarring during transitions.
+   *
+   * Eight builders for the v2 chapter set. Builder names still carry their
+   * v1 mood labels (Genesis / DAO / Merge / GasStorm / Rollup / Vitalik)
+   * because the underlying chord progressions and patterns map naturally:
+   *   ch0 LIMIT       → Genesis  (sparse pad, late-night dorm vibe)
+   *   ch1 WHITEPAPER  → Vitalik  (contemplative, cerebral lead)
+   *   ch2 SPACESHIP   → DAO      (warmer, found-object texture)
+   *   ch3 CROWDSALE   → GasStorm (driving pulse, momentum)
+   *   ch4 THE DAO     → DAO      (re-uses the unease, key shift)
+   *   ch5 FORK        → Rollup   (decisive arpeggio)
+   *   ch6 BLOOM       → Merge    (full pad, neon)
+   *   ch7 MERGE       → Vitalik  (resolves the arc)
+   * Anything out of range falls back to the Genesis pad — better than a
+   * silent crash if a chamber index ever drifts.
    */
   playBGM(index: number) {
     this.stopBGM();
-    const builder = [
-      () => this.buildGenesisBGM(),
-      () => this.buildDAOBGM(),
-      () => this.buildMergeBGM(),
-      () => this.buildGasStormBGM(),
-      () => this.buildRollupBGM(),
-      () => this.buildVitalikBGM(),
-    ][index];
+    const builders: Array<() => BGMChannel[]> = [
+      () => this.buildGenesisBGM(),   // ch0 LIMIT
+      () => this.buildVitalikBGM(),   // ch1 WHITEPAPER
+      () => this.buildDAOBGM(),       // ch2 SPACESHIP
+      () => this.buildGasStormBGM(),  // ch3 CROWDSALE
+      () => this.buildDAOBGM(),       // ch4 THE DAO
+      () => this.buildRollupBGM(),    // ch5 FORK
+      () => this.buildMergeBGM(),     // ch6 BLOOM
+      () => this.buildVitalikBGM(),   // ch7 MERGE
+    ];
+    const builder = builders[index] ?? builders[0];
     this.currentBGM = builder();
     for (const c of this.currentBGM) c.seq.start(0);
   }
