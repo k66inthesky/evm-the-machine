@@ -37,6 +37,11 @@ export class FPSController {
   // induce nausea (~3 cm peak) but adds the bodily presence the chambers
   // were missing.
   private bobPhase = 0;
+  // Trauma-style camera shake: chambers call addShake(amount) when something
+  // hits (a choice committed, a button slammed). The trauma scalar 0..1
+  // decays exponentially each frame and offsets yaw/pitch/y by trauma^2 *
+  // a per-axis multiplier — more impact at high trauma, none at zero.
+  private trauma = 0;
   cfg: Required<FPSConfig>;
 
   constructor(cfg: FPSConfig = {}) {
@@ -65,6 +70,12 @@ export class FPSController {
   setYaw(y: number) {
     this.yaw = y;
     this.applyRotation();
+  }
+
+  /** Add camera-shake trauma. Clamped to [0, 1]. Cumulative — calling
+   *  twice in one frame stacks. Decays exponentially in update(). */
+  addShake(amount: number) {
+    this.trauma = Math.min(1, this.trauma + amount);
   }
 
   update(dt: number, input: Input) {
@@ -130,6 +141,19 @@ export class FPSController {
     const targetBob = moved > 0 ? Math.sin(this.bobPhase) * 0.03 : 0;
     this.camera.position.copy(this.position);
     this.camera.position.y += targetBob;
+
+    // Camera shake: trauma squared so the falloff feels punchy. Tiny random
+    // offsets per axis, decay ~1.6 per second so a full-trauma shake settles
+    // in well under a second. Not applied to position.x/z to keep collision
+    // honest — only to y and the camera's local rotation.
+    if (this.trauma > 0) {
+      const t2 = this.trauma * this.trauma;
+      this.camera.position.y += (Math.random() - 0.5) * 0.06 * t2;
+      this.camera.rotation.x += (Math.random() - 0.5) * 0.04 * t2;
+      this.camera.rotation.y += (Math.random() - 0.5) * 0.04 * t2;
+      this.camera.rotation.z += (Math.random() - 0.5) * 0.04 * t2;
+      this.trauma = Math.max(0, this.trauma - dt * 1.6);
+    }
   }
 
   private applyRotation() {

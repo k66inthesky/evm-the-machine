@@ -35,6 +35,10 @@ game.start();
 window.addEventListener('archetype:gain', (e: Event) => {
   const weights = (e as CustomEvent).detail?.weights as Record<string, number> | undefined;
   if (!weights) return;
+  // Camera shake on every choice commit — small impulse so the player feels
+  // the decision land. The active chamber's FPS controller decays it.
+  const ch = (window as any).game?.activeChamber as any;
+  if (ch?.fps?.addShake) ch.fps.addShake(0.35);
   const parts = Object.entries(weights)
     .filter(([, v]) => v && v > 0)
     .map(([k, v]) => `+${k}${v && v > 1 ? v : ''}`)

@@ -53,10 +53,37 @@ export class ChamberSelect {
            <button id="connectMM" style="background:transparent;border:1px solid #ffa040;color:#ffa040;padding:6px 14px;font-family:inherit;font-size:11px;letter-spacing:0.2em;cursor:pointer;">METAMASK</button>
          </span>`;
 
+    // Machine-readout strip — sells the "you are inside a machine" framing
+    // by replacing the title slug with a gauge bank: 8 status lamps + a
+    // pulsing power LED + a scrolling tape that reads MACHINE / IDLE /
+    // READY / ARCHIVE depending on progress. Cheaper than a 3D HUD,
+    // matches the diegetic-canvas idiom of the chambers themselves.
+    const dotsHtml = Array.from({ length: 8 }, (_, i) =>
+      `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${
+        game.progress.has(i) ? '#ffd700' : 'rgba(0,240,255,0.22)'
+      };box-shadow:${game.progress.has(i) ? '0 0 6px #ffd700' : 'none'};margin:0 4px;"></span>`
+    ).join('');
+    const power = game.progress.completedCount() === 8 ? '#ffd700' : '#00f0ff';
+    const machineStatus = game.progress.completedCount() === 8
+      ? 'JOURNEY · ARCHIVED'
+      : game.progress.completedCount() > 0
+        ? 'MACHINE · READY · INSERT NEXT CHAPTER'
+        : 'MACHINE · IDLE · AWAITING FIRST OPERATOR';
     root.innerHTML = `
       <div style="font-size:28px;letter-spacing:0.3em;text-shadow:0 0 12px #00f0ff;">EVM — THE MACHINE</div>
       <div style="font-size:12px;letter-spacing:0.25em;opacity:0.6;margin-top:6px;">EIGHT CHAPTERS · ONE MACHINE · ONE OF YOU</div>
-      <div id="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:40px;max-width:1200px;width:100%;"></div>
+      <div style="margin-top:18px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center;border:1px solid ${power}55;background:#05080fcc;padding:10px 22px;letter-spacing:0.25em;">
+        <span style="display:inline-flex;align-items:center;gap:8px;font-size:11px;color:${power};">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${power};box-shadow:0 0 8px ${power};animation:powerpulse 1.6s ease-in-out infinite;"></span>
+          POWER
+        </span>
+        <span style="opacity:0.55;font-size:11px;">CHAPTERS</span>
+        ${dotsHtml}
+        <span style="opacity:0.55;font-size:11px;">·</span>
+        <span style="font-size:11px;color:${power};">${machineStatus}</span>
+      </div>
+      <style>@keyframes powerpulse { 0%,100%{opacity:1;} 50%{opacity:0.45;} }</style>
+      <div id="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:32px;max-width:1200px;width:100%;"></div>
       <div style="margin-top:36px;font-size:12px;letter-spacing:0.25em;display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center;">
         <span>${game.progress.completedCount()}/8 COMPLETE</span>
         <span>·</span>

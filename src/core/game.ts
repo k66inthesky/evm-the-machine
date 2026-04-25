@@ -136,15 +136,67 @@ export class Game {
   finishChamber(index: number) {
     this.progress.mark(index);
     this.chain.markChamber(index).catch(() => {/* offline ok */});
+    // Show a chapter-complete summary card before the transition. Gives the
+    // player a beat to register progress + see the 8-slot dot meter advance,
+    // and acknowledges the chamber's contribution to the hidden archetype
+    // tracker by showing which dimensions just gained weight.
+    const card = this.showChapterCompleteCard(index);
     const next = index + 1;
-    if (next >= CHAMBER_COUNT) {
-      // Finished the final chapter — archetype mirror / reveal screen.
-      this.enterFinale();
-    } else if (IMPLEMENTED_CHAMBERS.has(next)) {
-      this.enterChamber(next);
-    } else {
-      this.enterSelect();
-    }
+    setTimeout(() => {
+      card?.remove();
+      if (next >= CHAMBER_COUNT) {
+        this.enterFinale();
+      } else if (IMPLEMENTED_CHAMBERS.has(next)) {
+        this.enterChamber(next);
+      } else {
+        this.enterSelect();
+      }
+    }, 2400);
+  }
+
+  private showChapterCompleteCard(index: number): HTMLDivElement | null {
+    const root = this.host.querySelector('#ui') as HTMLDivElement | null;
+    if (!root) return null;
+    // 8-dot meter — done chapters lit gold, current pulsing cyan, future dim.
+    const dots = Array.from({ length: 8 }, (_, i) => {
+      let color = 'rgba(0,240,255,0.18)'; // future
+      let glow = '';
+      if (this.progress.has(i)) { color = '#ffd700'; glow = '0 0 6px #ffd700'; }
+      else if (i === index) { color = '#00f0ff'; glow = '0 0 12px #00f0ff'; }
+      return `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};box-shadow:${glow};margin:0 4px;"></span>`;
+    }).join('');
+    // Last archetype log entry tells us which weights were just added.
+    const tail = (this.archetype as any).log?.slice(-1)?.[0];
+    const weights = tail?.weights as Record<string, number> | undefined;
+    const gained = weights
+      ? Object.entries(weights).filter(([, v]) => v && v > 0).map(([k, v]) => `+${k}${v && v > 1 ? v : ''}`).join(' ')
+      : '';
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+      position: 'absolute', left: '50%', top: '50%',
+      transform: 'translate(-50%, -50%)',
+      padding: '28px 48px',
+      border: '1px solid #ffd700aa',
+      background: '#0a0e1aee',
+      color: '#ffd700',
+      fontFamily: 'Courier New, monospace',
+      textAlign: 'center',
+      letterSpacing: '0.25em',
+      pointerEvents: 'none',
+      zIndex: '50',
+      boxShadow: '0 0 32px #ffd70033',
+      opacity: '0',
+      transition: 'opacity 0.3s ease',
+    } as Partial<CSSStyleDeclaration>);
+    card.innerHTML = `
+      <div style="font-size:11px;letter-spacing:0.4em;opacity:0.7;">CHAPTER ${String(index + 1).padStart(2, '0')} · COMPLETE</div>
+      <div style="margin-top:18px;">${dots}</div>
+      <div style="font-size:11px;opacity:0.55;margin-top:18px;">${this.progress.completedCount()} / 8 CHAPTERS</div>
+      ${gained ? `<div style="font-size:13px;color:#9adfff;margin-top:14px;letter-spacing:0.3em;">MACHINE · ${gained}</div>` : ''}
+    `;
+    root.appendChild(card);
+    setTimeout(() => { card.style.opacity = '1'; }, 16);
+    return card;
   }
 
   enterFinale() {
