@@ -19,7 +19,7 @@ const ARCHETYPE_FLAVOR: Record<string, string> = {
 
 // Same image the contract advertises in its tokenURI — we preview it here
 // before the mint so the player sees what they're about to get.
-const NFT_PREVIEW_URL = 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/screenshot-04-crowdsale.png';
+const NFT_PREVIEW_URL = 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/cover.png';
 
 export class FinaleScreen {
   private root: HTMLDivElement;
@@ -59,27 +59,20 @@ export class FinaleScreen {
       </div>
     `;
 
-    // Wallet section. Shape depends on what's available:
-    //   - Both injected (MetaMask) and Google supported → two side-by-side buttons.
-    //   - Only one supported → single button.
-    //   - Neither (chain offline or no wallet at all) → friendly note.
+    // Wallet section. Both buttons are ALWAYS shown when the chain is
+    // deployed — that way the player sees both options and the click handler
+    // surfaces a clear, specific error if a path isn't yet configured. (The
+    // old "hide the Google button when no clientId" UX was confusing because
+    // the player didn't know the option existed.)
     let walletHtml = '';
     if (game.chain.deployed) {
-      const buttons: string[] = [];
-      if (game.chain.googleEnabled) {
-        buttons.push(`<button id="mintGoogle" style="padding:16px 32px;font-size:13px;letter-spacing:0.28em;background:#fff;border:2px solid #fff;color:#1a1a2a;font-family:inherit;cursor:pointer;font-weight:bold;">CLAIM&nbsp;WITH&nbsp;GOOGLE</button>`);
-      }
-      if (game.chain.hasInjectedWallet) {
-        buttons.push(`<button id="mintMM" style="padding:16px 32px;font-size:13px;letter-spacing:0.28em;background:transparent;border:2px solid #ffd700;color:#ffd700;font-family:inherit;cursor:pointer;text-shadow:0 0 6px #ffd700;">CLAIM&nbsp;WITH&nbsp;METAMASK</button>`);
-      }
-      if (buttons.length === 0) {
-        walletHtml = `<div style="margin-top:24px;font-size:13px;letter-spacing:0.25em;opacity:0.6;">NO WALLET PATH AVAILABLE</div>`;
-      } else {
-        walletHtml = `
-          <div style="margin-top:30px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;">${buttons.join('')}</div>
-          <div style="font-size:10px;letter-spacing:0.2em;opacity:0.5;margin-top:12px;">SEPOLIA TESTNET · FREE · OPTIONAL · NO GAS REQUIRED FOR GOOGLE PATH</div>
-        `;
-      }
+      walletHtml = `
+        <div style="margin-top:30px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;">
+          <button id="mintGoogle" style="padding:16px 32px;font-size:13px;letter-spacing:0.28em;background:#fff;border:2px solid #fff;color:#1a1a2a;font-family:inherit;cursor:pointer;font-weight:bold;">CLAIM&nbsp;WITH&nbsp;GOOGLE</button>
+          <button id="mintMM" style="padding:16px 32px;font-size:13px;letter-spacing:0.28em;background:transparent;border:2px solid #ffd700;color:#ffd700;font-family:inherit;cursor:pointer;text-shadow:0 0 6px #ffd700;">CLAIM&nbsp;WITH&nbsp;METAMASK</button>
+        </div>
+        <div style="font-size:10px;letter-spacing:0.2em;opacity:0.5;margin-top:12px;">SEPOLIA TESTNET · FREE · OPTIONAL · NO GAS REQUIRED FOR GOOGLE PATH</div>
+      `;
     } else {
       walletHtml = `<div style="margin-top:30px;font-size:13px;letter-spacing:0.25em;opacity:0.6;">ON-CHAIN LAYER OFFLINE — JOURNEY STILL SAVED LOCALLY</div>`;
     }
@@ -113,6 +106,17 @@ export class FinaleScreen {
       else btn.innerHTML = label;
     };
 
+    const statusToMsg = (status: any): string => {
+      switch (status.kind) {
+        case 'no-wallet': return 'NO METAMASK DETECTED · INSTALL METAMASK OR USE GOOGLE PATH';
+        case 'rejected': return 'METAMASK REQUEST REJECTED · TRY AGAIN OR USE GOOGLE PATH';
+        case 'wrong-chain': return `WRONG NETWORK (CHAIN ${status.chainId}) · SWITCH TO SEPOLIA IN METAMASK`;
+        case 'no-google-config': return 'GOOGLE LOGIN NEEDS A FREE THIRDWEB CLIENT ID — SEE submission/DEPLOY.md';
+        case 'google-cancelled': return 'GOOGLE LOGIN CANCELLED · TRY AGAIN OR USE METAMASK';
+        default: return 'WALLET CONNECTION FAILED · TRY THE OTHER PATH';
+      }
+    };
+
     const handleMint = async (via: 'metamask' | 'google') => {
       const btnMM = root.querySelector('#mintMM') as HTMLButtonElement | null;
       const btnG = root.querySelector('#mintGoogle') as HTMLButtonElement | null;
@@ -124,9 +128,7 @@ export class FinaleScreen {
         if (!game.chain.connectedAddress) {
           const status = via === 'google' ? await game.chain.connectWithGoogle() : await game.chain.connect();
           if (status.kind !== 'connected') {
-            result.textContent = via === 'google'
-              ? 'GOOGLE LOGIN CANCELLED OR UNAVAILABLE'
-              : 'WALLET REJECTED OR WRONG NETWORK';
+            result.textContent = statusToMsg(status);
             setBusy(btn, false, label);
             return;
           }
@@ -137,7 +139,7 @@ export class FinaleScreen {
           result.innerHTML = `MINTED · <a href="${game.chain.etherscanTx(hash)}" target="_blank" style="color:#ffd700;text-decoration:underline;">VIEW ON ETHERSCAN</a>`;
           game.audio.playSFX('mint');
         } else {
-          result.textContent = 'MINT DECLINED OR OFFLINE — PROGRESS STILL SAVED';
+          result.textContent = 'MINT FAILED OR DECLINED · PROGRESS STILL SAVED LOCALLY';
         }
       } finally {
         setBusy(btn, false, label);

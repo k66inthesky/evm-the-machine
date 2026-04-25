@@ -9,9 +9,10 @@ pragma solidity ^0.8.24;
  *   - Meaningful: the chain records the player's actual journey, not a login.
  *   - Optional: the game is fully playable offline. This contract is a bonus.
  *   - Cheap: a bitmap for completion state, one event per chamber.
- *   - ERC-721: the Journey is a real NFT with an image (the Crowdsale screenshot)
- *     so wallets / OpenSea / smart-wallet UIs render it. Soulbound: every
- *     transfer reverts.
+ *   - ERC-721: the Journey is a real NFT with an image (the eye-catching
+ *     cover artwork — neon EVM hero on the BLOOM scene) so wallets /
+ *     OpenSea / smart-wallet UIs render it. Soulbound: every transfer
+ *     reverts.
  *
  * State model:
  *   - progress[player] is a uint8 where bit i = chamber i completed.
@@ -21,7 +22,7 @@ pragma solidity ^0.8.24;
  *
  * tokenURI is built inline as a data: URI so no IPFS / centralized JSON host
  * is required. The image lives at a stable public URL (the GitHub raw of the
- * v2 Crowdsale screenshot) so any wallet UI can render it.
+ * v2 cover artwork) so any wallet UI can render it.
  */
 contract EVMHistorian {
     string public constant name = "EVM: The Machine — Journey";
@@ -33,7 +34,7 @@ contract EVMHistorian {
     // Static URL for the journey artwork. Lives on GitHub Pages (raw.github)
     // so it stays free + permanent for the life of the repo.
     string public constant IMAGE_URL =
-        "https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/screenshot-04-crowdsale.png";
+        "https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/cover.png";
 
     string public constant EXTERNAL_URL = "https://github.com/k66inthesky/evm-the-machine";
 

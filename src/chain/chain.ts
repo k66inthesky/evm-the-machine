@@ -34,7 +34,10 @@ const TW_CLIENT_ID = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID || '';
 export type ChainStatus =
   | { kind: 'offline' }
   | { kind: 'no-wallet' }
+  | { kind: 'rejected' }
   | { kind: 'wrong-chain'; chainId: number }
+  | { kind: 'no-google-config' }
+  | { kind: 'google-cancelled' }
   | { kind: 'connected'; address: Address; via: 'metamask' | 'google' };
 
 export class Chain {
@@ -80,30 +83,39 @@ export class Chain {
   async connect(): Promise<ChainStatus> {
     if (!this.hasInjectedWallet) return { kind: 'no-wallet' };
     const eth = (window as any).ethereum;
+    let accounts: string[];
     try {
-      const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
-      this.address = accounts[0] as Address;
-      this.wallet = createWalletClient({ chain: sepolia, transport: custom(eth) });
-      this.connectedVia = 'metamask';
-      const chainIdHex = await eth.request({ method: 'eth_chainId' }) as string;
-      const chainId = parseInt(chainIdHex, 16);
-      if (chainId !== sepolia.id) {
-        try {
-          await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${sepolia.id.toString(16)}` }] });
-        } catch {
-          return { kind: 'wrong-chain', chainId };
-        }
-      }
-      return { kind: 'connected', address: this.address, via: 'metamask' };
-    } catch {
+      accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
+    } catch (e: any) {
+      // EIP-1193: code 4001 = user rejected. Anything else we treat as no-wallet.
+      if (e?.code === 4001) return { kind: 'rejected' };
       return { kind: 'no-wallet' };
     }
+    if (!accounts || accounts.length === 0) return { kind: 'rejected' };
+    this.address = accounts[0] as Address;
+    this.wallet = createWalletClient({ chain: sepolia, transport: custom(eth) });
+    this.connectedVia = 'metamask';
+    let chainId = sepolia.id;
+    try {
+      const chainIdHex = await eth.request({ method: 'eth_chainId' }) as string;
+      chainId = parseInt(chainIdHex, 16);
+    } catch { /* assume sepolia */ }
+    if (chainId !== sepolia.id) {
+      try {
+        await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${sepolia.id.toString(16)}` }] });
+      } catch {
+        // User declined the switch (or the chain isn't added). Either way, leave
+        // them connected on the wrong chain so we can surface a clear message.
+        return { kind: 'wrong-chain', chainId };
+      }
+    }
+    return { kind: 'connected', address: this.address, via: 'metamask' };
   }
 
   // ── thirdweb inAppWallet (Google OAuth → smart wallet) ────────────────
 
   async connectWithGoogle(): Promise<ChainStatus> {
-    if (!this.googleEnabled) return { kind: 'no-wallet' };
+    if (!this.googleEnabled) return { kind: 'no-google-config' };
     try {
       const tw = await import('thirdweb');
       const wallets = await import('thirdweb/wallets');
@@ -119,9 +131,13 @@ export class Chain {
       // owns the signing. mintJourney/markChamber detect this via connectedVia.
       this.wallet = null;
       return { kind: 'connected', address: this.address, via: 'google' };
-    } catch (e) {
+    } catch (e: any) {
+      const msg = (e?.message || '').toLowerCase();
+      if (msg.includes('cancel') || msg.includes('denied') || msg.includes('closed')) {
+        return { kind: 'google-cancelled' };
+      }
       console.warn('[chain] google login failed:', e);
-      return { kind: 'no-wallet' };
+      return { kind: 'no-google-config' };
     }
   }
 
