@@ -39,11 +39,17 @@ export class MergeChamber extends Chamber {
   private pedestalCanvas!: HTMLCanvasElement;
   private pedestalCtx!: CanvasRenderingContext2D;
   private pedestalTex!: THREE.CanvasTexture;
+  private exitDoor!: THREE.Mesh;
   private minerRows: { plane: THREE.Mesh; tex: THREE.CanvasTexture; canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; alive: boolean; dimming: number }[] = [];
-  private phase: 'intro' | 'active' | 'picked' = 'intro';
+  // intro:    must press E at pedestal to read choices.
+  // active:   reading choices, must press 1/2/3/4.
+  // merged:   chose 1/2/3, miners winding down, MUST walk to EXIT and press E.
+  // walked-out: chose 4 (or walked out without picking), MUST walk to EXIT and press E.
+  // exiting:  player pressed E at exit, win() scheduled.
+  private phase: 'intro' | 'active' | 'merged' | 'walked-out' | 'exiting' = 'intro';
+  private pickedChoice: Choice | null = null;
   private prompt: HTMLDivElement | null = null;
   private t = 0;
-  private exited = false;
   private readonly ROOM = { xMin: -5, xMax: 5, zMin: -7, zMax: 4 };
 
   protected build() {
@@ -166,15 +172,18 @@ export class MergeChamber extends Chamber {
     );
     top.position.set(0, 1.03, -4);
     this.scene.add(top);
-    // The button (a wide red dome).
+    // The button (a wide red dome) — moved to the FRONT edge of the pedestal
+    // so it stops occluding the screen text from the player's standing pose.
     const btn = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.18, 0.08, 24),
+      new THREE.CylinderGeometry(0.16, 0.16, 0.08, 24),
       new THREE.MeshBasicMaterial({ color: 0xff3040 }),
     );
-    btn.position.set(0, 1.09, -4);
+    btn.position.set(0, 1.09, -3.78);
     this.scene.add(btn);
     this.button = btn;
-    // Pedestal screen angled up toward the player.
+    // Pedestal screen — was at y=1.04 angled, but the button & pedestal top
+    // ate the bottom half of the screen for the player. Moved to a vertical
+    // plane standing UP behind the button so all four choices are visible.
     this.pedestalCanvas = document.createElement('canvas');
     this.pedestalCanvas.width = 1024; this.pedestalCanvas.height = 640;
     this.pedestalCtx = this.pedestalCanvas.getContext('2d')!;
@@ -184,11 +193,11 @@ export class MergeChamber extends Chamber {
     this.pedestalTex.generateMipmaps = true;
     this.pedestalTex.anisotropy = 16;
     this.pedestalScreen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.86, 0.54),
+      new THREE.PlaneGeometry(1.1, 0.7),
       new THREE.MeshBasicMaterial({ map: this.pedestalTex, toneMapped: false }),
     );
-    this.pedestalScreen.position.set(0, 1.04, -3.74);
-    this.pedestalScreen.rotation.x = -0.6;
+    this.pedestalScreen.position.set(0, 1.6, -4.18);
+    this.pedestalScreen.rotation.x = -0.18;
     this.scene.add(this.pedestalScreen);
   }
 
@@ -201,6 +210,7 @@ export class MergeChamber extends Chamber {
     door.position.set(0, 1.5, 5.98);
     door.rotation.y = Math.PI;
     this.scene.add(door);
+    this.exitDoor = door;
     const sign = document.createElement('canvas');
     sign.width = 512; sign.height = 128;
     const s = sign.getContext('2d')!;
@@ -233,29 +243,33 @@ export class MergeChamber extends Chamber {
 
     if (this.phase === 'intro') {
       ctx.fillStyle = '#e0eeff'; ctx.font = 'bold 17px monospace';
-      ctx.fillText('The merge is ready.', 18, 66);
+      ctx.fillText('The merge is ready.', 18, 56);
       ctx.font = '14px monospace'; ctx.fillStyle = '#9aa0b0';
-      ctx.fillText('PoW is about to lay down. A decade', 18, 96);
-      ctx.fillText('of work becomes a last block.', 18, 120);
+      ctx.fillText('PoW is about to lay down. A decade', 18, 84);
+      ctx.fillText('of work becomes a last block.', 18, 106);
       ctx.fillStyle = '#ffb070'; ctx.font = 'italic bold 15px monospace';
       ctx.fillText('[ press E to open the choice ]', 18, VH - 26);
     } else if (this.phase === 'active' && !picked) {
-      ctx.fillStyle = '#e0eeff'; ctx.font = 'bold 15px monospace';
-      ctx.fillText('How do you meet this moment?', 18, 66);
-      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#e0eeff'; ctx.font = 'bold 16px monospace';
+      ctx.fillText('How do you meet this moment?', 18, 50);
+      ctx.font = 'bold 13px monospace';
+      // Wider per-row spacing + larger font so the four choices breathe and
+      // none of them get clipped by the monitor frame.
       CHOICES.forEach((c, i) => {
         ctx.fillStyle = '#9adfff';
-        ctx.fillText(`[${c.key}] ${c.label}`, 18, 100 + i * 32);
+        const y = 84 + i * 44;
+        // Wrap the label inside a 460px box so long lines don't run off.
+        wrap(ctx, `[${c.key}] ${c.label}`, 18, y, VW - 36, 18);
       });
       ctx.fillStyle = '#ffb070'; ctx.font = 'italic bold 14px monospace';
       ctx.fillText('press 1 / 2 / 3 / 4', 18, VH - 26);
     } else if (picked) {
       ctx.fillStyle = '#40ff80'; ctx.font = 'bold 22px monospace';
-      ctx.fillText('> merged.', 18, 82);
+      ctx.fillText(picked.key === '4' ? '> walked.' : '> merged.', 18, 56);
       ctx.fillStyle = '#e0eeff'; ctx.font = 'bold 14px monospace';
-      wrap(ctx, picked.body, 18, 120, VW - 36, 22);
-      ctx.fillStyle = '#5a7090'; ctx.font = '12px monospace';
-      ctx.fillText('(the machine is quieter now.)', 18, VH - 26);
+      wrap(ctx, picked.body, 18, 96, VW - 36, 22);
+      ctx.fillStyle = '#ffb070'; ctx.font = 'italic bold 14px monospace';
+      ctx.fillText('[ walk to the EXIT door · press E ]', 18, VH - 26);
     }
     this.pedestalTex.needsUpdate = true;
   }
@@ -278,58 +292,74 @@ export class MergeChamber extends Chamber {
     }
 
     // Button pulses red while still active.
-    if (this.phase !== 'picked') {
+    if (this.phase === 'intro' || this.phase === 'active') {
       const mat = this.button.material as THREE.MeshBasicMaterial;
       mat.color.setHex(Math.sin(this.t * 3) > 0.3 ? 0xff4060 : 0xaa2030);
     }
 
-    // Silent-exit: walk out the back door without choosing.
-    if (!this.exited && this.phase !== 'picked' && this.fps.position.z > 5.4) {
-      this.exited = true;
-      this.game.archetype.add(7, 'silent-exit', { W: 2, R: 1 });
-      this.game.audio.playSFX('portal');
-      this.setObjective('YOU WALKED OUT · JOURNEY COMPLETE');
-      setTimeout(() => this.win(), 900);
-    }
-
-    if (this.phase !== 'picked') this.updateInteractions(input);
+    if (this.phase !== 'exiting') this.updateInteractions(input);
   }
 
   private updateInteractions(input: Input) {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-    const hits = this.raycaster.intersectObjects([this.pedestal, this.pedestalScreen, this.button], false);
-    const target = hits.length > 0 && hits[0].distance < 2.8 ? hits[0].object : null;
 
-    if (!target) this.setPrompt(null);
-    else if (this.phase === 'intro') this.setPrompt('PRESS E TO BEGIN CEREMONY');
-    else if (this.phase === 'active') this.setPrompt('PRESS 1 / 2 / 3 / 4');
+    // Two interaction zones depending on phase: pedestal (intro/active) and
+    // exit door (merged/walked-out). After a choice is committed, the only
+    // way out is the door — no auto-end.
+    const lookingAtPedestal = (() => {
+      const hits = this.raycaster.intersectObjects([this.pedestal, this.pedestalScreen, this.button], false);
+      return hits.length > 0 && hits[0].distance < 3.2 ? hits[0].object : null;
+    })();
+    const lookingAtExit = (() => {
+      const hits = this.raycaster.intersectObjects([this.exitDoor], false);
+      return hits.length > 0 && hits[0].distance < 3.0 ? hits[0].object : null;
+    })();
 
-    if (target && input.wasPressed('KeyE') && this.phase === 'intro') {
-      this.phase = 'active';
-      this.renderPedestal();
-      this.game.audio.playSFX('interact');
-      this.setObjective('CHOOSE HOW YOU MERGE · 1 / 2 / 3 / 4');
-    }
-    if (this.phase === 'active') {
+    if (this.phase === 'intro') {
+      this.setPrompt(lookingAtPedestal ? 'PRESS E TO BEGIN CEREMONY' : null);
+      if (lookingAtPedestal && input.wasPressed('KeyE')) {
+        this.phase = 'active';
+        this.renderPedestal();
+        this.game.audio.playSFX('interact');
+        this.setObjective('CHOOSE HOW YOU MERGE · 1 / 2 / 3 / 4');
+      }
+    } else if (this.phase === 'active') {
+      this.setPrompt(lookingAtPedestal ? 'PRESS 1 / 2 / 3 / 4' : null);
       for (const c of CHOICES) if (input.wasPressed(`Digit${c.key}`)) { this.onChoose(c); break; }
+    } else if (this.phase === 'merged' || this.phase === 'walked-out') {
+      this.setPrompt(lookingAtExit ? 'PRESS E AT THE EXIT · WITNESS' : null);
+      if (lookingAtExit && input.wasPressed('KeyE')) {
+        this.phase = 'exiting';
+        this.setPrompt(null);
+        this.setObjective('JOURNEY COMPLETE');
+        this.game.audio.playSFX('portal');
+        setTimeout(() => this.win(), 700);
+      }
     }
   }
 
   private onChoose(c: Choice) {
     if (this.phase !== 'active') return;
-    this.phase = 'picked';
+    this.pickedChoice = c;
     this.game.archetype.add(7, `choice-${c.key}`, c.weights);
     this.game.audio.playSFX('merge');
     this.renderPedestal(c);
-    this.setObjective('MERGED · CEREMONY COMPLETE');
 
     if (c.key === '4') {
-      // Option 4 = walk out. Fade everything, no miner shutdown.
-      setTimeout(() => this.win(), 1800);
+      // Option 4 = "walk out". Skip the miner wind-down — but the chapter
+      // still doesn't end automatically. Player must walk to the EXIT and
+      // press E (the witness pose).
+      this.phase = 'walked-out';
+      this.setObjective('WALK TO THE EXIT · PRESS E');
       return;
     }
 
-    // Wind down miners one row at a time.
+    // Choices 1-3: wind miners down row by row, then unlock the exit. Same
+    // requirement — chapter ends only when the player walks to the door
+    // and presses E. This keeps the merge ceremony from being a one-button
+    // skip and gives the player a beat to see the room go quiet.
+    this.phase = 'merged';
+    this.setObjective('THE MACHINE GOES QUIET · WALK TO THE EXIT · PRESS E');
     const delayPer = c.key === '2' ? 220 : c.key === '3' ? 180 : 120;
     this.minerRows.forEach((m, i) => {
       setTimeout(() => {
@@ -337,7 +367,11 @@ export class MergeChamber extends Chamber {
         this.game.audio.playSFX('hit');
       }, 400 + i * delayPer);
     });
-    setTimeout(() => this.win(), 400 + this.minerRows.length * delayPer + 900);
+    // Cool the button color to "merged" once the ceremony completes.
+    setTimeout(() => {
+      const mat = this.button.material as THREE.MeshBasicMaterial;
+      mat.color.setHex(0x404550);
+    }, 400 + this.minerRows.length * delayPer);
   }
 
   private canMoveTo(p: THREE.Vector3): boolean {

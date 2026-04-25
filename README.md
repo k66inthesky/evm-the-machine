@@ -30,13 +30,16 @@ No plugins, no installers — runs in any modern browser.
 
 ---
 
-## ⛓ On-chain (Sepolia, optional)
+## ⛓ On-chain (Sepolia, optional — but designed for low friction)
 
-- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) at [`0xDc605783C5bad53F0Bf4a329fe1f833045dD521B`](https://sepolia.etherscan.io/address/0xDc605783C5bad53F0Bf4a329fe1f833045dD521B)
-- **Deploy tx**: [`0x8affb0…d91d`](https://sepolia.etherscan.io/tx/0x8affb0724f2956f2cdfed306943f6206f36748520f052a0f85a45ed12fbed91d)
-- The chain records each chamber you complete. Finish all eight and `mintJourney(completionSeconds)` opens up.
+- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) — soulbound ERC-721, the artwork is the Crowdsale chapter screenshot served from this repo.
+- The chain records each chamber you complete. Finish all eight, and a `mintJourney(completionSeconds)` Journey NFT opens up.
+- **Two wallet paths** at the finale, both gated on the same contract:
+  - **`CLAIM WITH GOOGLE`** — thirdweb `inAppWallet` spawns a smart wallet (ERC-4337-flavoured account abstraction) the moment the player signs in. **No MetaMask, no seed phrase, no extension.** This is the path for web2 players.
+  - **`CLAIM WITH METAMASK`** — classic injected EOA flow for players who already have a wallet.
+- The Journey NFT is **soulbound**: `transferFrom` and `safeTransferFrom` revert. The token id, the bearer, the completion time, and a `tokenURI` (data: URI with embedded JSON + a stable image URL) are all on-chain.
 
-See [`contracts/README.md`](contracts/README.md) for deploy + verify steps.
+See [`contracts/README.md`](contracts/README.md) for deploy + verify steps. The v2 contract is an ERC-721 — re-deploy required if upgrading from the v1 scoreboard.
 
 ---
 

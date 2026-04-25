@@ -46,14 +46,48 @@ Then on https://wavedash.com/, open the game → "Submit to jam" → pick
 **Gamedev.js Jam 2026** → the Wavedash Challenge is auto-selected for
 Wavedash-deployed submissions.
 
-## 4. Sepolia contract — ✅ DONE
+## 4. Sepolia contract — ⚠️ RE-DEPLOY REQUIRED FOR v2
 
-- **Address**: [`0xDc605783C5bad53F0Bf4a329fe1f833045dD521B`](https://sepolia.etherscan.io/address/0xDc605783C5bad53F0Bf4a329fe1f833045dD521B)
-- **Deploy tx**: [`0x8affb0…d91d`](https://sepolia.etherscan.io/tx/0x8affb0724f2956f2cdfed306943f6206f36748520f052a0f85a45ed12fbed91d)
-- **Cost**: 0.000000905 ETH (0.3 → 0.2999991 SepoliaETH remaining)
-- Address is baked into the current `submission/build.zip`; just re-upload.
+The v1 deployment (`0xDc60…521B`) is the old 6-chamber scoreboard — keep it
+as a historical record, but the v2 frontend talks to a new contract. The
+v2 `EVMHistorian.sol` is now a **soulbound ERC-721** with `tokenURI` that
+points at the Crowdsale chapter screenshot, so wallets / OpenSea render the
+NFT inline.
 
-## 5. Final 2-minute checklist before the deadline
+```bash
+cd contracts
+cp ../.env.example ../.env  # if you haven't already
+$EDITOR ../.env             # set DEPLOYER_PRIVATE_KEY + SEPOLIA_RPC_URL
+forge create src/EVMHistorian.sol:EVMHistorian \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --private-key $DEPLOYER_PRIVATE_KEY \
+  --broadcast
+# Copy the deployed address into the project root .env:
+#   VITE_HISTORIAN_ADDRESS=0x...
+```
+
+After deploy, regenerate `submission/build.zip` so the on-itch upload picks
+up the new address: `npm run build && cd dist && zip -r ../submission/build.zip .`.
+
+## 5. thirdweb (for the "Login with Google" mint path)
+
+The v2 finale offers two mint paths: MetaMask (existing) and `CLAIM WITH GOOGLE`
+(thirdweb `inAppWallet` — a smart wallet spawned at sign-in time, no extension
+or seed phrase). The MetaMask path works without any setup; the Google path
+needs a thirdweb client ID.
+
+1. Sign up free at https://thirdweb.com/dashboard/.
+2. Create a project → copy the **Client ID** (NOT the secret).
+3. Add to `.env`:
+   ```
+   VITE_THIRDWEB_CLIENT_ID=<your-client-id>
+   ```
+4. `npm run build` again so the build picks it up.
+
+If you skip this step the finale just hides the Google button and falls
+back to MetaMask-only.
+
+## 6. Final 2-minute checklist before the deadline
 
 - [ ] All three platforms show the game playable from a cold browser.
 - [ ] itch.io page opens from an incognito window (i.e. it's actually public).
