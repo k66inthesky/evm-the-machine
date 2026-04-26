@@ -83,6 +83,12 @@ export class ChamberSelect {
         <span style="font-size:11px;color:${power};">${machineStatus}</span>
       </div>
       <style>@keyframes powerpulse { 0%,100%{opacity:1;} 50%{opacity:0.45;} }</style>
+      ${game.progress.completedCount() === 8 ? `
+        <button id="claimJourney" style="margin-top:18px;padding:14px 36px;background:transparent;border:2px solid #ffd700;color:#ffd700;font-family:inherit;font-size:14px;letter-spacing:0.32em;cursor:pointer;text-shadow:0 0 8px #ffd700;box-shadow:0 0 24px #ffd70044;animation:powerpulse 2s ease-in-out infinite;">
+          ★ CLAIM JOURNEY NFT ★
+        </button>
+        <div style="font-size:10px;letter-spacing:0.25em;opacity:0.55;margin-top:8px;color:#ffd700;">8 / 8 COMPLETE · MINTABLE ON SEPOLIA · GOOGLE OR METAMASK</div>
+      ` : ''}
       <div id="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:32px;max-width:1200px;width:100%;"></div>
       <div style="margin-top:36px;font-size:12px;letter-spacing:0.25em;display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center;">
         <span>${game.progress.completedCount()}/8 COMPLETE</span>
@@ -121,6 +127,11 @@ export class ChamberSelect {
     }
 
     root.querySelector('#back')?.addEventListener('click', () => game.enterTitle());
+    // 8/8 complete → big "CLAIM JOURNEY NFT" CTA enters the finale screen,
+    // which already owns the mint UI (NFT preview card + Coinbase / MetaMask
+    // buttons + result line). Players who replay don't have to play through
+    // ch08 again to reach the mint.
+    root.querySelector('#claimJourney')?.addEventListener('click', () => game.enterFinale());
 
     const status = root.querySelector('#walletStatus') as HTMLDivElement;
     const buttons = root.querySelector('#walletButtons') as HTMLDivElement | null;
@@ -134,7 +145,9 @@ export class ChamberSelect {
     };
     const onConnected = (addrShort: string, via: string) => {
       if (buttons) buttons.innerHTML = `<span style="color:#ffd700;">${addrShort} <span style="opacity:0.5;font-size:10px;">(${via})</span></span>`;
-      setIdle('CONNECTED · YOU CAN MINT THE JOURNEY NFT FROM THE FINALE SCREEN');
+      setIdle(game.progress.completedCount() === 8
+        ? 'CONNECTED · CLICK ★ CLAIM JOURNEY NFT ★ ABOVE TO MINT'
+        : 'CONNECTED · MINT BUTTON UNLOCKS WHEN YOU COMPLETE ALL 8 CHAPTERS');
     };
 
     root.querySelector('#connectMM')?.addEventListener('click', async () => {
