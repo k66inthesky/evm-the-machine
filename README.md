@@ -32,14 +32,14 @@ No plugins, no installers — runs in any modern browser.
 
 ## ⛓ On-chain (Sepolia, optional — but designed for low friction)
 
-- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) — soulbound ERC-721, the artwork is the Crowdsale chapter screenshot served from this repo.
-- The chain records each chamber you complete. Finish all eight, and a `mintJourney(completionSeconds)` Journey NFT opens up.
+- **Contract**: [`EVMHistorian`](contracts/src/EVMHistorian.sol) at [`0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB`](https://sepolia.etherscan.io/address/0x961821ADDf66BBf8A696ced1Ff94d1AD532C6DCB) — soulbound ERC-721, artwork is the cover image (`submission/cover.png`) served from this repo's GitHub raw URL.
+- Finish all eight chapters, and a `mintJourney(completionSeconds)` Journey NFT opens up at the finale (and on the chamber-select screen).
 - **Two wallet paths** at the finale, both gated on the same contract:
-  - **`CLAIM WITH GOOGLE`** — thirdweb `inAppWallet` spawns a smart wallet (ERC-4337-flavoured account abstraction) the moment the player signs in. **No MetaMask, no seed phrase, no extension.** This is the path for web2 players.
-  - **`CLAIM WITH METAMASK`** — classic injected EOA flow for players who already have a wallet.
+  - **`CLAIM WITH GOOGLE`** — Coinbase Smart Wallet spawns an ERC-4337 smart account from a passkey / Google / email login, **no extension and no developer signup or credit card required**. This is the path for web2 players.
+  - **`CLAIM WITH METAMASK`** — classic injected EOA flow for players who already have a wallet. EIP-6963 wallet discovery picks the actual MetaMask provider when Binance / OKX / Coinbase Wallet extensions are also installed.
 - The Journey NFT is **soulbound**: `transferFrom` and `safeTransferFrom` revert. The token id, the bearer, the completion time, and a `tokenURI` (data: URI with embedded JSON + a stable image URL) are all on-chain.
 
-See [`contracts/README.md`](contracts/README.md) for deploy + verify steps. The v2 contract is an ERC-721 — re-deploy required if upgrading from the v1 scoreboard.
+See [`contracts/README.md`](contracts/README.md) for deploy + verify steps.
 
 ---
 

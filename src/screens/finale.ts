@@ -1,8 +1,9 @@
 // FinaleScreen — shown after Chapter 08 is complete. Reveals the player's
 // top two archetypes (the 8-dim vector the chapters have been silently
 // adding to), shows the Journey NFT artwork, and offers two ways to mint:
-// MetaMask (existing flow) or Google login (thirdweb inAppWallet, smart
-// wallet under the hood — this is the lower-barrier path for web2 players).
+// MetaMask (existing injected EOA flow) or "Google login" via Coinbase
+// Smart Wallet (passkey / Google / email → ERC-4337 smart wallet, no
+// extension required) — the lower-barrier path for web2 players.
 import type { Game } from '../core/game';
 import { ARCHETYPE_LABELS } from '../systems/archetype';
 
