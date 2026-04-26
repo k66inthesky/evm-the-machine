@@ -3,18 +3,15 @@
 // Two parallel wallet paths so the player can pick whichever fits them:
 //
 //   1. MetaMask / injected EOA (existing flow, no SDK overhead).
-//   2. thirdweb inAppWallet — "Login with Google" gives the player a smart
-//      wallet (ERC-4337-flavoured account abstraction) without making them
-//      install anything. This is the lower-barrier path for web2 players.
+//   2. Coinbase Smart Wallet — passkey / Google / email login spawns an
+//      ERC-4337 smart wallet without making the player install anything,
+//      no developer signup, no clientId, no credit card. This is the
+//      lower-barrier path for web2 players.
 //
 // Both paths land on the same EVMHistorian contract on Sepolia. The chain
 // is the player's *souvenir*, not a gate — every call here must fail
 // silently and return offline-ok results so the game stays fully playable
 // without ANY wallet.
-//
-// Setup TODOs (see submission/DEPLOY.md):
-//   - VITE_THIRDWEB_CLIENT_ID  — sign up at thirdweb.com (free), grab a clientId.
-//   - VITE_HISTORIAN_ADDRESS    — re-deploy the v2 ERC-721 contract; address goes here.
 import {
   createPublicClient,
   createWalletClient,
@@ -29,7 +26,6 @@ import { HISTORIAN_ABI } from './abi';
 
 const RPC = (import.meta as any).env?.VITE_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com';
 const CONTRACT = ((import.meta as any).env?.VITE_HISTORIAN_ADDRESS || '0x0000000000000000000000000000000000000000') as Address;
-const TW_CLIENT_ID = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID || '';
 
 export type ChainStatus =
   | { kind: 'offline' }
@@ -45,19 +41,20 @@ export class Chain {
   private wallet: WalletClient | null = null;
   private address: Address | null = null;
   private connectedVia: 'metamask' | 'google' | null = null;
-  // Lazy thirdweb handles. Loaded on first Google-login click so the SDK
-  // doesn't bloat the initial bundle for offline players.
-  private thirdwebClient: any = null;
-  private inAppWallet: any = null;
+  // Lazy Coinbase Smart Wallet provider. Loaded on first click so the
+  // ~150 KB SDK doesn't bloat the initial bundle for offline players.
+  private cbProvider: any = null;
 
   readonly contract: Address;
   readonly deployed: boolean;
-  readonly googleEnabled: boolean;
+  // Coinbase Smart Wallet needs no clientId / signup, so the Google-style
+  // path is always available wherever JS runs. Kept as a field for parity
+  // with the old thirdweb-gated UI.
+  readonly googleEnabled = true;
 
   constructor() {
     this.contract = CONTRACT;
     this.deployed = CONTRACT !== '0x0000000000000000000000000000000000000000';
-    this.googleEnabled = TW_CLIENT_ID.length > 0;
     this.pub = createPublicClient({ chain: sepolia, transport: http(RPC) });
   }
 
@@ -67,7 +64,7 @@ export class Chain {
 
   /** Legacy alias kept so finale.ts compiles unchanged. */
   get hasWallet(): boolean {
-    return this.hasInjectedWallet || this.googleEnabled;
+    return true; // both paths are always available
   }
 
   get connectedAddress(): Address | null {
@@ -142,31 +139,52 @@ export class Chain {
     return { kind: 'connected', address: this.address, via: 'metamask' };
   }
 
-  // ── thirdweb inAppWallet (Google OAuth → smart wallet) ────────────────
+  // ── Coinbase Smart Wallet (passkey / Google / email → smart account) ──
 
   async connectWithGoogle(): Promise<ChainStatus> {
-    if (!this.googleEnabled) return { kind: 'no-google-config' };
     try {
-      const tw = await import('thirdweb');
-      const wallets = await import('thirdweb/wallets');
-      this.thirdwebClient = tw.createThirdwebClient({ clientId: TW_CLIENT_ID });
-      this.inAppWallet = wallets.inAppWallet();
-      const account = await this.inAppWallet.connect({
-        client: this.thirdwebClient,
-        strategy: 'google',
+      // Lazy-load — keeps offline players from paying the SDK's bundle cost.
+      const sdkModule = await import('@coinbase/wallet-sdk');
+      // Default export is the constructor; some bundlers expose under .default.
+      const SDKCtor: any = (sdkModule as any).CoinbaseWalletSDK || (sdkModule as any).default;
+      const sdk = new SDKCtor({
+        appName: 'EVM: The Machine',
+        appChainIds: [sepolia.id],
       });
-      this.address = account.address as Address;
-      this.connectedVia = 'google';
-      // We don't build a viem WalletClient for the Google path — thirdweb
-      // owns the signing. mintJourney/markChamber detect this via connectedVia.
-      this.wallet = null;
-      return { kind: 'connected', address: this.address, via: 'google' };
-    } catch (e: any) {
-      const msg = (e?.message || '').toLowerCase();
-      if (msg.includes('cancel') || msg.includes('denied') || msg.includes('closed')) {
-        return { kind: 'google-cancelled' };
+      this.cbProvider = sdk.makeWeb3Provider({ options: 'smartWalletOnly' });
+      let accounts: string[];
+      try {
+        accounts = await this.cbProvider.request({ method: 'eth_requestAccounts' }) as string[];
+      } catch (e: any) {
+        const msg = (e?.message || '').toLowerCase();
+        if (e?.code === 4001 || msg.includes('cancel') || msg.includes('closed') || msg.includes('rejected')) {
+          return { kind: 'google-cancelled' };
+        }
+        throw e;
       }
-      console.warn('[chain] google login failed:', e);
+      if (!accounts || accounts.length === 0) return { kind: 'google-cancelled' };
+      this.address = accounts[0] as Address;
+      this.wallet = createWalletClient({ chain: sepolia, transport: custom(this.cbProvider) });
+      this.connectedVia = 'google';
+      // Make sure we're on Sepolia. The smart-wallet popup usually obeys
+      // appChainIds, but the user could have switched manually.
+      try {
+        const chainIdHex = await this.cbProvider.request({ method: 'eth_chainId' }) as string;
+        const chainId = parseInt(chainIdHex, 16);
+        if (chainId !== sepolia.id) {
+          try {
+            await this.cbProvider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${sepolia.id.toString(16)}` }],
+            });
+          } catch {
+            return { kind: 'wrong-chain', chainId };
+          }
+        }
+      } catch { /* assume sepolia */ }
+      return { kind: 'connected', address: this.address, via: 'google' };
+    } catch (e) {
+      console.warn('[chain] coinbase smart wallet login failed:', e);
       return { kind: 'no-google-config' };
     }
   }
@@ -174,23 +192,9 @@ export class Chain {
   // ── Writes ────────────────────────────────────────────────────────────
 
   async markChamber(index: number): Promise<string | null> {
-    if (!this.deployed || !this.address) return null;
+    if (!this.deployed || !this.wallet || !this.address) return null;
     try {
-      if (this.connectedVia === 'google' && this.thirdwebClient) {
-        const tw = await import('thirdweb');
-        const sepoliaChain = (await import('thirdweb/chains')).sepolia;
-        const contract = tw.getContract({
-          client: this.thirdwebClient,
-          chain: sepoliaChain,
-          address: this.contract,
-          abi: HISTORIAN_ABI as any,
-        });
-        const tx = tw.prepareContractCall({ contract, method: 'markChamber', params: [index] });
-        const result = await tw.sendTransaction({ transaction: tx, account: await this.inAppWallet.getAccount() });
-        return result.transactionHash;
-      }
-      if (!this.wallet) return null;
-      return await this.wallet.writeContract({
+      const hash = await this.wallet.writeContract({
         chain: sepolia,
         account: this.address,
         address: this.contract,
@@ -198,6 +202,7 @@ export class Chain {
         functionName: 'markChamber',
         args: [index],
       });
+      return hash;
     } catch (e) {
       console.warn('[chain] markChamber failed (offline-ok):', e);
       return null;
@@ -205,27 +210,9 @@ export class Chain {
   }
 
   async mintJourney(completionTimeSeconds: number): Promise<string | null> {
-    if (!this.deployed || !this.address) return null;
+    if (!this.deployed || !this.wallet || !this.address) return null;
     try {
-      if (this.connectedVia === 'google' && this.thirdwebClient) {
-        const tw = await import('thirdweb');
-        const sepoliaChain = (await import('thirdweb/chains')).sepolia;
-        const contract = tw.getContract({
-          client: this.thirdwebClient,
-          chain: sepoliaChain,
-          address: this.contract,
-          abi: HISTORIAN_ABI as any,
-        });
-        const tx = tw.prepareContractCall({
-          contract,
-          method: 'mintJourney',
-          params: [BigInt(completionTimeSeconds)],
-        });
-        const result = await tw.sendTransaction({ transaction: tx, account: await this.inAppWallet.getAccount() });
-        return result.transactionHash;
-      }
-      if (!this.wallet) return null;
-      return await this.wallet.writeContract({
+      const hash = await this.wallet.writeContract({
         chain: sepolia,
         account: this.address,
         address: this.contract,
@@ -233,6 +220,7 @@ export class Chain {
         functionName: 'mintJourney',
         args: [BigInt(completionTimeSeconds)],
       });
+      return hash;
     } catch (e) {
       console.warn('[chain] mintJourney failed (offline-ok):', e);
       return null;
@@ -258,7 +246,7 @@ export class Chain {
 
   async readJourneyImageUrl(): Promise<string> {
     if (!this.deployed) {
-      return 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/screenshot-04-crowdsale.png';
+      return 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/cover.png';
     }
     try {
       const raw = await this.pub.readContract({
@@ -268,7 +256,7 @@ export class Chain {
       });
       return raw as string;
     } catch {
-      return 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/screenshot-04-crowdsale.png';
+      return 'https://raw.githubusercontent.com/k66inthesky/evm-the-machine/main/submission/cover.png';
     }
   }
 

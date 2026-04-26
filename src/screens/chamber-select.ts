@@ -151,8 +151,8 @@ export class ChamberSelect {
       setBusy('OPENING GOOGLE LOGIN…');
       const r = await game.chain.connectWithGoogle();
       if (r.kind === 'connected') onConnected(short(r.address), 'google');
-      else if (r.kind === 'no-google-config') setIdle('GOOGLE LOGIN NEEDS A FREE THIRDWEB CLIENT ID — SET VITE_THIRDWEB_CLIENT_ID IN .env (see submission/DEPLOY.md)');
-      else if (r.kind === 'google-cancelled') setIdle('GOOGLE LOGIN CANCELLED · TRY AGAIN OR USE METAMASK');
+      else if (r.kind === 'no-google-config') setIdle('COINBASE SMART WALLET FAILED TO LOAD · CHECK CONNECTION');
+      else if (r.kind === 'google-cancelled') setIdle('SMART WALLET LOGIN CANCELLED · TRY AGAIN OR USE METAMASK');
       else setIdle('CONNECTION FAILED · TRY METAMASK');
     });
 

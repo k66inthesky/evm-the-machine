@@ -69,23 +69,20 @@ forge create src/EVMHistorian.sol:EVMHistorian \
 # Then npm run release && re-upload submission/build.zip.
 ```
 
-## 5. thirdweb (for the "Login with Google" mint path)
+## 5. Smart-wallet path — ✅ ZERO SETUP
 
-The v2 finale offers two mint paths: MetaMask (existing) and `CLAIM WITH GOOGLE`
-(thirdweb `inAppWallet` — a smart wallet spawned at sign-in time, no extension
-or seed phrase). The MetaMask path works without any setup; the Google path
-needs a thirdweb client ID.
+The v2 finale offers two mint paths: **MetaMask** (classic injected EOA) and
+**CLAIM WITH GOOGLE** (Coinbase Smart Wallet — passkey / Google / email
+login spawns an ERC-4337 smart wallet inside the player's browser).
 
-1. Sign up free at https://thirdweb.com/dashboard/.
-2. Create a project → copy the **Client ID** (NOT the secret).
-3. Add to `.env`:
-   ```
-   VITE_THIRDWEB_CLIENT_ID=<your-client-id>
-   ```
-4. `npm run build` again so the build picks it up.
+Coinbase Smart Wallet was picked over thirdweb / Web3Auth specifically
+because it requires NO developer signup, NO clientId, NO credit card.
+The player just clicks the button → Coinbase popup → done. The whole
+@coinbase/wallet-sdk dependency is dynamic-imported on first click so
+offline players don't pay the bundle cost.
 
-If you skip this step the finale just hides the Google button and falls
-back to MetaMask-only.
+Nothing to configure here. If the SDK ever fails to load, the finale
+falls back gracefully to MetaMask-only with a clear inline message.
 
 ## 6. Final 2-minute checklist before the deadline
 

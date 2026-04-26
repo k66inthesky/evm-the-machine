@@ -4,12 +4,16 @@ import { defineConfig } from 'vite';
 // defaults work. `base: './'` makes asset paths relative so the bundle runs
 // when unzipped into any subdirectory (itch hosts games under hashed paths).
 //
-// File-count budget: itch.io enforces a 1000-file limit per zip. thirdweb's
-// tree-shakeable design produces ~460 chain-definition chunks plus ~460 wallet
-// icon chunks (1063 total), which busts the limit. We collapse the thirdweb
-// surface into one bucket via manualChunks below — the dynamic-import
-// boundary remains (still lazy-loads only when the player clicks
-// "CLAIM WITH GOOGLE"), but internally it's one chunk instead of hundreds.
+// We let Rollup natural-chunk most of node_modules (viem / three / tone go
+// wherever they're imported from). The Coinbase Smart Wallet SDK is the only
+// dependency we explicitly bucket — it's a fat dynamic-imported chunk so
+// keeping it isolated keeps the lazy-load story clean and stops Rollup from
+// inlining stray dependencies into the main index bundle.
+//
+// History note: an earlier build used thirdweb here and blew itch.io's
+// 1000-file limit (1063 files from ~460 chain-defs + ~460 wallet icons).
+// thirdweb has been replaced with @coinbase/wallet-sdk because the latter
+// requires no developer signup, no clientId, and no credit card.
 export default defineConfig({
   base: './',
   build: {
@@ -21,25 +25,8 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
         manualChunks(id) {
-          // Collapse ONLY the thirdweb tree (which is what blew the file
-          // count — ~460 chain-defs + ~460 wallet icons). thirdweb pulls
-          // its own copy of viem + noble + ox internally, so we bucket
-          // those WITH thirdweb to avoid cross-chunk TDZ errors at boot.
-          //
-          // Earlier attempt split viem into its own chunk too — that
-          // broke at runtime with "Cannot access 'Va' before initialization"
-          // because thirdweb's chunk referenced the viem chunk before
-          // viem's module body had executed. Keeping them together fixes it.
-          //
-          // viem used directly from src/chain/chain.ts (the public RPC
-          // client) is a STATIC import, so Rollup keeps that copy in the
-          // main index chunk — the home screen still doesn't pay the
-          // thirdweb cost until the player clicks CLAIM WITH GOOGLE.
-          if (
-            id.includes('node_modules/thirdweb') ||
-            id.includes('node_modules/ox')
-          ) {
-            return 'thirdweb';
+          if (id.includes('node_modules/@coinbase/wallet-sdk')) {
+            return 'coinbase-wallet';
           }
           return undefined;
         },

@@ -110,9 +110,9 @@ export class FinaleScreen {
       switch (status.kind) {
         case 'no-wallet': return 'NO METAMASK DETECTED · INSTALL METAMASK OR USE GOOGLE PATH';
         case 'rejected': return 'METAMASK REQUEST REJECTED · TRY AGAIN OR USE GOOGLE PATH';
-        case 'wrong-chain': return `WRONG NETWORK (CHAIN ${status.chainId}) · SWITCH TO SEPOLIA IN METAMASK`;
-        case 'no-google-config': return 'GOOGLE LOGIN NEEDS A FREE THIRDWEB CLIENT ID — SEE submission/DEPLOY.md';
-        case 'google-cancelled': return 'GOOGLE LOGIN CANCELLED · TRY AGAIN OR USE METAMASK';
+        case 'wrong-chain': return `WRONG NETWORK (CHAIN ${status.chainId}) · SWITCH TO SEPOLIA`;
+        case 'no-google-config': return 'COINBASE SMART WALLET FAILED TO LOAD · CHECK CONNECTION';
+        case 'google-cancelled': return 'SMART WALLET LOGIN CANCELLED · TRY AGAIN OR USE METAMASK';
         default: return 'WALLET CONNECTION FAILED · TRY THE OTHER PATH';
       }
     };
