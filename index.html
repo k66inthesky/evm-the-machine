@@ -4,6 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EVM: The Machine</title>
+    <!-- Inline pre-module script: register the unhandled-rejection swallow
+         and fire host-platform ready signals BEFORE any other JS loads.
+         This catches wallet-extension noise that fires at page-load time
+         (Binance/OKX/Coinbase Wallet auto-probing window.ethereum and
+         throwing addListener errors from inpage.js) and prevents host
+         loaders (Wavedash, YT Playables) from interpreting that noise as
+         our game crashing. Also fires repeated ready beacons in case the
+         host SDK injects after our main bundle loads. -->
+    <script>
+      (function () {
+        // Swallow injected-wallet-extension rejection noise. These come
+        // from Binance Wallet / OKX / Coinbase Wallet inpage.js trying to
+        // auto-connect at page load and throwing internally — not our
+        // bug, but their unhandled rejections trip platform error
+        // boundaries and stick the Wavedash loader at 0%.
+        window.addEventListener('unhandledrejection', function (e) {
+          var stack = String((e.reason && e.reason.stack) || '');
+          var msg = String((e.reason && e.reason.message) || e.reason || '');
+          if (stack.indexOf('inpage.js') !== -1 ||
+              msg.indexOf('Failed to connect to MetaMask') !== -1 ||
+              msg.indexOf("Cannot read properties of undefined (reading 'addListener')") !== -1) {
+            e.preventDefault();
+          }
+        });
+        // Beacon "ready" to every known host SDK + the parent frame.
+        // Defensive: every method call wrapped, missing methods no-op.
+        function beacon() {
+          var w = window;
+          try { w.WavedashJS && w.WavedashJS.ready && w.WavedashJS.ready(); } catch (e) {}
+          try { w.WavedashJS && w.WavedashJS.gameLoaded && w.WavedashJS.gameLoaded(); } catch (e) {}
+          try { w.WavedashJS && w.WavedashJS.gameReady && w.WavedashJS.gameReady(); } catch (e) {}
+          try { w.WavedashJS && w.WavedashJS.firstFrameReady && w.WavedashJS.firstFrameReady(); } catch (e) {}
+          try { w.ytgame && w.ytgame.game && w.ytgame.game.firstFrameReady && w.ytgame.game.firstFrameReady(); } catch (e) {}
+          try { w.ytgame && w.ytgame.game && w.ytgame.game.gameReady && w.ytgame.game.gameReady(); } catch (e) {}
+          try { window.parent && window.parent.postMessage({ type: 'ready', source: 'evm-the-machine' }, '*'); } catch (e) {}
+          try { window.parent && window.parent.postMessage({ type: 'gameReady', source: 'evm-the-machine' }, '*'); } catch (e) {}
+          try { window.parent && window.parent.postMessage({ type: 'loaded' }, '*'); } catch (e) {}
+        }
+        // Fire on multiple cadences so we catch SDKs that inject late.
+        var times = [0, 100, 250, 500, 1000, 2000, 4000];
+        for (var i = 0; i < times.length; i++) setTimeout(beacon, times[i]);
+        // Also fire when DOMContentLoaded + load fire.
+        document.addEventListener('DOMContentLoaded', beacon);
+        window.addEventListener('load', beacon);
+      })();
+    </script>
     <meta name="description" content="Step inside the World Computer. A first-person journey through eight chapters of Ethereum history. Gamedev.js Jam 2026." />
     <style>
       :root {
