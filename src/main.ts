@@ -25,6 +25,34 @@ game.start();
 // will poke at this, and so will I.
 (window as any).game = game;
 
+// Tell host platforms the game is ready. Each platform watches its own
+// `window` injection and shows a 0% loader until we signal back. We try
+// every known method defensively because the SDKs evolve and a wrong
+// guess silently no-ops, while staying silent costs us a stuck loader.
+//   - Wavedash → window.WavedashJS  (SDK injected by their iframe)
+//   - YT Playables → window.ytgame.game.{firstFrameReady,gameReady}
+//   - itch.io / standalone → no host present, every call no-ops
+function signalReady() {
+  const w: any = window;
+  try { w.WavedashJS?.ready?.(); } catch {}
+  try { w.WavedashJS?.gameLoaded?.(); } catch {}
+  try { w.WavedashJS?.gameReady?.(); } catch {}
+  try { w.WavedashJS?.firstFrameReady?.(); } catch {}
+  try { w.ytgame?.game?.firstFrameReady?.(); } catch {}
+  try { w.ytgame?.game?.gameReady?.(); } catch {}
+  // Generic postMessage fallback for any iframe host that listens for
+  // a ready event (Wavedash playtest historically did).
+  try { window.parent?.postMessage({ type: 'ready', source: 'evm-the-machine' }, '*'); } catch {}
+  try { window.parent?.postMessage({ type: 'gameReady', source: 'evm-the-machine' }, '*'); } catch {}
+  try { window.parent?.postMessage({ type: 'loaded' }, '*'); } catch {}
+}
+// Fire on next frame so the title screen DOM is mounted first.
+setTimeout(signalReady, 0);
+// Wavedash sometimes injects WavedashJS slightly after page load; retry
+// briefly to catch the late-bind case.
+setTimeout(signalReady, 250);
+setTimeout(signalReady, 1000);
+
 // Archetype gain HUD flash — global listener so chambers don't have to wire
 // their own. When a choice or behavioural event adds weight to one or more
 // of the eight axes, a small fixed-position label fades in top-left for ~1.4s
