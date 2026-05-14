@@ -1,4 +1,5 @@
 # EVM: The Machine
+🥉3rd Place in the [Ethereum Challenge at Gamedev.js Jam 2026](https://gamedevjs.com/jam/2026/challenges-winners-feedback/#ethereum)
 
 ![cover](submission/cover.png)
 
@@ -13,8 +14,7 @@ Optional on-chain: every chamber you complete emits a `ChamberCompleted` event o
 
 ## 🎮 Play
 
-- **itch.io**: _(submitting before the deadline)_
-- **Wavedash**: _(same build, deployed there)_
+- **itch.io**: [Play Here](https://k66inthesky.itch.io/evm-the-machine)
 - **Source on GitHub**: [github.com/k66inthesky/evm-the-machine](https://github.com/k66inthesky/evm-the-machine)
 
 Local development:
